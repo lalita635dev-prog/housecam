@@ -12,6 +12,16 @@ const PORT = process.env.PORT || 3000;
 // Servir archivos estáticos
 app.use(express.static('public'));
 
+// Endpoint de health check para mantener el servidor activo
+app.get('/ping', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    timestamp: new Date().toISOString(),
+    cameras: cameras.size,
+    viewers: viewers.size
+  });
+});
+
 // Iniciar servidor HTTP
 const server = app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
