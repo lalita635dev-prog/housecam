@@ -74,6 +74,47 @@
             margin-bottom: 20px;
         }
 
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .input-group label input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 5px;
+            outline: none;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #38bdf8;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #38bdf8;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
         label {
             display: block;
             margin-bottom: 8px;
@@ -133,6 +174,18 @@
             background: #000;
             border-radius: 10px;
             margin-top: 20px;
+            object-fit: contain;
+            transition: filter 0.3s ease;
+        }
+
+        /* Mejorar renderizado de video */
+        video::-webkit-media-controls {
+            display: flex !important;
+        }
+
+        /* Filtros para modo nocturno */
+        video.night-mode {
+            filter: brightness(150%) contrast(120%);
         }
 
         .status {
@@ -228,6 +281,31 @@
                 <input type="text" id="camera-name" placeholder="Ej: Entrada Principal" value="Cámara 1">
             </div>
             <div class="input-group">
+                <label for="video-quality">Calidad de Video:</label>
+                <select id="video-quality">
+                    <option value="high">Alta (1080p - 2.5 Mbps)</option>
+                    <option value="medium" selected>Media (720p - 1.5 Mbps)</option>
+                    <option value="low">Baja (480p - 800 Kbps)</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>
+                    <input type="checkbox" id="night-mode"> 🌙 Modo Nocturno (Aumenta brillo)
+                </label>
+            </div>
+            <div class="input-group">
+                <label for="brightness">☀️ Brillo: <span id="brightness-value">100</span>%</label>
+                <input type="range" id="brightness" min="50" max="200" value="100" style="width: 100%;">
+            </div>
+            <div class="input-group">
+                <label for="contrast">🎨 Contraste: <span id="contrast-value">100</span>%</label>
+                <input type="range" id="contrast" min="50" max="200" value="100" style="width: 100%;">
+            </div>
+            <div class="input-group">
+                <label for="zoom">🔍 Zoom: <span id="zoom-value">1.0</span>x</label>
+                <input type="range" id="zoom" min="1" max="3" step="0.1" value="1" style="width: 100%;">
+            </div>
+            <div class="input-group">
                 <label for="server-url-camera">URL del Servidor:</label>
                 <input type="text" id="server-url-camera" placeholder="wss://tu-app.onrender.com" value="">
             </div>
@@ -272,7 +350,67 @@
             const defaultUrl = `${protocol}//${window.location.host}`;
             document.getElementById('server-url-camera').value = defaultUrl;
             document.getElementById('server-url-viewer').value = defaultUrl;
+
+            // Event listeners para controles de cámara
+            setupCameraControls();
         });
+
+        function setupCameraControls() {
+            // Brillo
+            document.getElementById('brightness').addEventListener('input', (e) => {
+                document.getElementById('brightness-value').textContent = e.target.value;
+                applyVideoFilters();
+            });
+
+            // Contraste
+            document.getElementById('contrast').addEventListener('input', (e) => {
+                document.getElementById('contrast-value').textContent = e.target.value;
+                applyVideoFilters();
+            });
+
+            // Zoom
+            document.getElementById('zoom').addEventListener('input', (e) => {
+                document.getElementById('zoom-value').textContent = parseFloat(e.target.value).toFixed(1);
+                applyVideoZoom();
+            });
+
+            // Modo nocturno
+            document.getElementById('night-mode').addEventListener('change', (e) => {
+                const video = document.getElementById('camera-preview');
+                if (e.target.checked) {
+                    video.classList.add('night-mode');
+                    document.getElementById('brightness').value = 150;
+                    document.getElementById('brightness-value').textContent = '150';
+                    document.getElementById('contrast').value = 120;
+                    document.getElementById('contrast-value').textContent = '120';
+                } else {
+                    video.classList.remove('night-mode');
+                    document.getElementById('brightness').value = 100;
+                    document.getElementById('brightness-value').textContent = '100';
+                    document.getElementById('contrast').value = 100;
+                    document.getElementById('contrast-value').textContent = '100';
+                }
+                applyVideoFilters();
+            });
+        }
+
+        function applyVideoFilters() {
+            const video = document.getElementById('camera-preview');
+            const brightness = document.getElementById('brightness').value;
+            const contrast = document.getElementById('contrast').value;
+            const nightMode = document.getElementById('night-mode').checked;
+            
+            if (!nightMode) {
+                video.style.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
+            }
+        }
+
+        function applyVideoZoom() {
+            const video = document.getElementById('camera-preview');
+            const zoom = document.getElementById('zoom').value;
+            video.style.transform = `scale(${zoom})`;
+            video.style.transformOrigin = 'center center';
+        }
 
         const iceServers = {
             iceServers: [
@@ -304,22 +442,52 @@
             try {
                 const cameraName = document.getElementById('camera-name').value;
                 const serverUrl = document.getElementById('server-url-camera').value;
+                const quality = document.getElementById('video-quality').value;
 
                 showStatus('camera-status', 'Solicitando acceso a la cámara...', 'info');
 
+                // Configuración según calidad seleccionada
+                let videoConfig = {};
+                switch(quality) {
+                    case 'high':
+                        videoConfig = {
+                            facingMode: 'environment',
+                            width: { ideal: 1920, min: 1280 },
+                            height: { ideal: 1080, min: 720 },
+                            frameRate: { ideal: 30, min: 20 },
+                            aspectRatio: 16/9
+                        };
+                        break;
+                    case 'low':
+                        videoConfig = {
+                            facingMode: 'environment',
+                            width: { ideal: 854, max: 854 },
+                            height: { ideal: 480, max: 480 },
+                            frameRate: { ideal: 20, min: 15 },
+                            aspectRatio: 16/9
+                        };
+                        break;
+                    default: // medium
+                        videoConfig = {
+                            facingMode: 'environment',
+                            width: { ideal: 1280, min: 854 },
+                            height: { ideal: 720, min: 480 },
+                            frameRate: { ideal: 25, min: 15 },
+                            aspectRatio: 16/9
+                        };
+                }
+
                 // Configuración de alta calidad para video
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { 
-                        facingMode: 'environment',
-                        width: { ideal: 1920, min: 1280 },
-                        height: { ideal: 1080, min: 720 },
-                        frameRate: { ideal: 30, min: 15 },
-                        aspectRatio: 16/9
-                    },
+                    video: videoConfig,
                     audio: false
                 });
 
                 document.getElementById('camera-preview').srcObject = localStream;
+                
+                // Aplicar configuraciones visuales iniciales
+                applyVideoFilters();
+                applyVideoZoom();
                 
                 ws = new WebSocket(serverUrl);
 
@@ -376,8 +544,39 @@
             const pc = new RTCPeerConnection(iceServers);
             peerConnections.set(viewerId, pc);
 
+            const quality = document.getElementById('video-quality').value;
+            let maxBitrate, maxFramerate;
+            
+            // Configurar bitrate según calidad
+            switch(quality) {
+                case 'high':
+                    maxBitrate = 2500000; // 2.5 Mbps
+                    maxFramerate = 30;
+                    break;
+                case 'low':
+                    maxBitrate = 800000; // 800 Kbps
+                    maxFramerate = 20;
+                    break;
+                default: // medium
+                    maxBitrate = 1500000; // 1.5 Mbps
+                    maxFramerate = 25;
+            }
+
+            // Agregar tracks con configuración de alta calidad
             localStream.getTracks().forEach(track => {
-                pc.addTrack(track, localStream);
+                const sender = pc.addTrack(track, localStream);
+                
+                // Configurar parámetros de codificación para mejor calidad
+                if (track.kind === 'video') {
+                    const params = sender.getParameters();
+                    if (!params.encodings) {
+                        params.encodings = [{}];
+                    }
+                    // Aumentar bitrate para mejor calidad
+                    params.encodings[0].maxBitrate = maxBitrate;
+                    params.encodings[0].maxFramerate = maxFramerate;
+                    sender.setParameters(params).catch(e => console.log('Error setting params:', e));
+                }
             });
 
             pc.onicecandidate = (event) => {
@@ -390,7 +589,11 @@
                 }
             };
 
-            const offer = await pc.createOffer();
+            // Crear offer con configuración de alta calidad
+            const offer = await pc.createOffer({
+                offerToReceiveVideo: true,
+                offerToReceiveAudio: false
+            });
             await pc.setLocalDescription(offer);
 
             ws.send(JSON.stringify({
@@ -504,7 +707,13 @@
             peerConnections.set(cameraId, pc);
 
             pc.ontrack = (event) => {
-                document.getElementById('viewer-video').srcObject = event.streams[0];
+                const video = document.getElementById('viewer-video');
+                video.srcObject = event.streams[0];
+                
+                // Forzar reproducción en alta calidad
+                video.onloadedmetadata = () => {
+                    video.play().catch(e => console.log('Error playing video:', e));
+                };
             };
 
             pc.onicecandidate = (event) => {
@@ -518,7 +727,12 @@
             };
 
             await pc.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await pc.createAnswer();
+            
+            // Crear answer con configuración para recibir alta calidad
+            const answer = await pc.createAnswer({
+                offerToReceiveVideo: true,
+                offerToReceiveAudio: false
+            });
             await pc.setLocalDescription(answer);
 
             ws.send(JSON.stringify({
