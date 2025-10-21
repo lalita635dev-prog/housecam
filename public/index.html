@@ -24,95 +24,47 @@
             padding: 20px;
         }
 
-        h1 {
+        h1, h2 {
             text-align: center;
             margin-bottom: 30px;
             color: #38bdf8;
         }
 
-        .mode-selection {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        /* ===== LOGIN ===== */
+        .login-container {
+            max-width: 400px;
+            margin: 100px auto;
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .login-header {
+            text-align: center;
             margin-bottom: 30px;
         }
 
-        .mode-btn {
-            padding: 15px 30px;
-            font-size: 18px;
-            background: #1e293b;
-            border: 2px solid #38bdf8;
-            color: #38bdf8;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.3s;
+        .login-header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
         }
 
-        .mode-btn:hover {
-            background: #38bdf8;
-            color: #0f172a;
+        .login-header p {
+            color: #94a3b8;
         }
 
-        .mode-btn.active {
-            background: #38bdf8;
-            color: #0f172a;
-        }
-
-        .section {
-            display: none;
-            background: #1e293b;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 20px;
-        }
-
-        .section.active {
-            display: block;
-        }
-
+        /* ===== BOTONES Y FORMULARIOS ===== */
         .input-group {
             margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 8px;
-            color: #94a3b8;
-            font-weight: 500;
-        }
-
-        .input-group label input[type="checkbox"] {
-            width: auto;
-            margin-right: 8px;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            height: 6px;
-            background: #334155;
-            border-radius: 5px;
-            outline: none;
-            padding: 0;
-            cursor: pointer;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 20px;
-            height: 20px;
-            background: #38bdf8;
-            border-radius: 50%;
-            cursor: pointer;
-        }
-
-        input[type="range"]::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
-            background: #38bdf8;
-            border-radius: 50%;
-            cursor: pointer;
-            border: none;
         }
 
         label {
@@ -148,6 +100,7 @@
             border-radius: 8px;
             cursor: pointer;
             transition: background 0.3s;
+            margin-top: 10px;
         }
 
         .btn:hover {
@@ -168,9 +121,127 @@
             background: #dc2626;
         }
 
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            display: inline-block;
+        }
+
+        /* ===== HEADER ===== */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e293b;
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-badge {
+            background: #38bdf8;
+            color: #0f172a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .admin-badge {
+            background: #f59e0b;
+            color: #0f172a;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: #1e293b;
+            border: 2px solid #334155;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #94a3b8;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            border-color: #38bdf8;
+        }
+
+        .tab.active {
+            background: #38bdf8;
+            color: #0f172a;
+            border-color: #38bdf8;
+        }
+
+        /* ===== CARDS ===== */
+        .card {
+            background: #1e293b;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .camera-card {
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .camera-card:hover {
+            border-color: #38bdf8;
+            transform: translateY(-2px);
+        }
+
+        .camera-card h3 {
+            color: #38bdf8;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .camera-card p {
+            color: #94a3b8;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        /* ===== VIDEO ===== */
         video {
             width: 100%;
-            max-width: 100%;
             background: #000;
             border-radius: 10px;
             margin-top: 20px;
@@ -178,20 +249,52 @@
             transition: filter 0.3s ease;
         }
 
-        /* Mejorar renderizado de video */
-        video::-webkit-media-controls {
-            display: flex !important;
-        }
-
-        /* Filtros para modo nocturno */
         video.night-mode {
             filter: brightness(150%) contrast(120%);
+        }
+
+        .video-container {
+            position: relative;
+        }
+
+        .video-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        /* ===== TABLA DE USUARIOS ===== */
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #334155;
+        }
+
+        .users-table th {
+            background: #0f172a;
+            color: #38bdf8;
+            font-weight: 600;
+        }
+
+        .users-table tr:hover {
+            background: #0f172a;
         }
 
         .status {
             padding: 10px;
             border-radius: 8px;
-            margin-bottom: 20px;
+            margin: 15px 0;
             text-align: center;
             font-weight: 500;
         }
@@ -214,167 +317,416 @@
             border: 1px solid #93c5fd;
         }
 
-        .camera-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
         }
 
-        .camera-card {
-            background: #0f172a;
-            border: 2px solid #334155;
-            border-radius: 10px;
-            padding: 15px;
+        .checkbox-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #e2e8f0;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 5px;
+            outline: none;
+            padding: 0;
             cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .camera-card:hover {
-            border-color: #38bdf8;
-            transform: translateY(-2px);
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #38bdf8;
+            border-radius: 50%;
+            cursor: pointer;
         }
 
-        .camera-card h3 {
-            color: #38bdf8;
-            margin-bottom: 10px;
-        }
-
-        .camera-card p {
-            color: #94a3b8;
-            font-size: 14px;
+        input[type="range"]::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            background: #38bdf8;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
-        .video-container {
-            position: relative;
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
         }
 
-        .video-info {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 8px 12px;
-            border-radius: 5px;
-            font-size: 14px;
+        .modal-content {
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: auto;
+        }
+
+        @media (max-width: 768px) {
+            .camera-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tabs {
+                flex-wrap: wrap;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎥 Sistema de Vigilancia</h1>
-
-        <div class="mode-selection">
-            <button class="mode-btn" onclick="selectMode('camera')">📹 Modo Cámara</button>
-            <button class="mode-btn" onclick="selectMode('viewer')">👁️ Modo Visualización</button>
-        </div>
-
-        <!-- Sección Cámara -->
-        <div id="camera-section" class="section">
-            <h2>📹 Configurar Cámara</h2>
-            <div class="input-group">
-                <label for="camera-name">Nombre de la Cámara:</label>
-                <input type="text" id="camera-name" placeholder="Ej: Entrada Principal" value="Cámara 1">
-            </div>
-            <div class="input-group">
-                <label for="video-quality">Calidad de Video:</label>
-                <select id="video-quality">
-                    <option value="high">Alta (1080p - 2.5 Mbps)</option>
-                    <option value="medium" selected>Media (720p - 1.5 Mbps)</option>
-                    <option value="low">Baja (480p - 800 Kbps)</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>
-                    <input type="checkbox" id="night-mode"> 🌙 Modo Nocturno (Aumenta brillo)
-                </label>
-            </div>
-            <div class="input-group">
-                <label for="brightness">☀️ Brillo: <span id="brightness-value">100</span>%</label>
-                <input type="range" id="brightness" min="50" max="200" value="100" style="width: 100%;">
-            </div>
-            <div class="input-group">
-                <label for="contrast">🎨 Contraste: <span id="contrast-value">100</span>%</label>
-                <input type="range" id="contrast" min="50" max="200" value="100" style="width: 100%;">
-            </div>
-            <div class="input-group">
-                <label for="zoom">🔍 Zoom: <span id="zoom-value">1.0</span>x</label>
-                <input type="range" id="zoom" min="1" max="3" step="0.1" value="1" style="width: 100%;">
-            </div>
-            <div class="input-group">
-                <label for="server-url-camera">URL del Servidor:</label>
-                <input type="text" id="server-url-camera" placeholder="wss://tu-app.onrender.com" value="">
-            </div>
-            <button class="btn" id="start-camera-btn" onclick="startCamera()">Iniciar Cámara</button>
-            <button class="btn btn-danger hidden" id="stop-camera-btn" onclick="stopCamera()">Detener Cámara</button>
-            <div id="camera-status"></div>
-            <div class="video-container">
-                <video id="camera-preview" autoplay muted playsinline></video>
-                <div class="video-info hidden" id="camera-info"></div>
+        <!-- ===== VISTA DE LOGIN ===== -->
+        <div id="login-view" class="view active">
+            <div class="login-container">
+                <div class="login-header">
+                    <h1>🎥 Sistema de Vigilancia</h1>
+                    <p>Ingresa tus credenciales</p>
+                </div>
+                <div class="input-group">
+                    <label for="login-username">Usuario:</label>
+                    <input type="text" id="login-username" placeholder="Ingresa tu usuario">
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Contraseña:</label>
+                    <input type="password" id="login-password" placeholder="Ingresa tu contraseña">
+                </div>
+                <div id="login-status"></div>
+                <button class="btn" onclick="login()">Iniciar Sesión</button>
+                <p style="text-align: center; margin-top: 20px; color: #64748b; font-size: 14px;">
+                    Admin por defecto: <strong>admin / admin123</strong>
+                </p>
             </div>
         </div>
 
-        <!-- Sección Visualización -->
-        <div id="viewer-section" class="section">
-            <h2>👁️ Ver Cámaras</h2>
-            <div class="input-group">
-                <label for="server-url-viewer">URL del Servidor:</label>
-                <input type="text" id="server-url-viewer" placeholder="wss://tu-app.onrender.com" value="">
+        <!-- ===== VISTA PRINCIPAL ===== -->
+        <div id="main-view" class="view">
+            <div class="header">
+                <div class="header-info">
+                    <span id="user-badge" class="user-badge"></span>
+                    <span id="role-badge"></span>
+                </div>
+                <button class="btn btn-secondary btn-small" onclick="logout()">Cerrar Sesión</button>
             </div>
-            <button class="btn" id="connect-viewer-btn" onclick="connectViewer()">Conectar</button>
-            <button class="btn btn-danger hidden" id="disconnect-viewer-btn" onclick="disconnectViewer()">Desconectar</button>
-            <div id="viewer-status"></div>
-            <div id="cameras-list" class="camera-grid hidden"></div>
-            <div class="video-container hidden" id="viewer-video-container">
-                <video id="viewer-video" autoplay playsinline controls></video>
-                <div class="video-info" id="viewer-info"></div>
-                <button class="btn" style="margin-top: 10px;" onclick="backToCameraList()">← Volver a la lista</button>
+
+            <div class="tabs" id="main-tabs">
+                <div class="tab active" onclick="showTab('cameras')">📹 Cámaras</div>
+                <div class="tab" onclick="showTab('viewer')">👁️ Visualizar</div>
+                <div class="tab hidden" id="admin-tab" onclick="showTab('admin')">⚙️ Administración</div>
+            </div>
+
+            <!-- Tab Cámaras -->
+            <div id="cameras-tab" class="card">
+                <h2>📹 Configurar Cámara</h2>
+                <div class="input-group">
+                    <label for="camera-name">Nombre de la Cámara:</label>
+                    <input type="text" id="camera-name" placeholder="Ej: Entrada Principal">
+                </div>
+                <div class="input-group">
+                    <label for="video-quality">Calidad de Video:</label>
+                    <select id="video-quality">
+                        <option value="high">Alta (1080p - 2.5 Mbps)</option>
+                        <option value="medium" selected>Media (720p - 1.5 Mbps)</option>
+                        <option value="low">Baja (480p - 800 Kbps)</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="night-mode"> 🌙 Modo Nocturno
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label for="brightness">☀️ Brillo: <span id="brightness-value">100</span>%</label>
+                    <input type="range" id="brightness" min="50" max="200" value="100">
+                </div>
+                <div class="input-group">
+                    <label for="contrast">🎨 Contraste: <span id="contrast-value">100</span>%</label>
+                    <input type="range" id="contrast" min="50" max="200" value="100">
+                </div>
+                <div class="input-group">
+                    <label for="zoom">🔍 Zoom: <span id="zoom-value">1.0</span>x</label>
+                    <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
+                </div>
+                <div id="camera-status"></div>
+                <button class="btn" id="start-camera-btn" onclick="startCamera()">Iniciar Cámara</button>
+                <button class="btn btn-danger hidden" id="stop-camera-btn" onclick="stopCamera()">Detener Cámara</button>
+                <div class="video-container">
+                    <video id="camera-preview" autoplay muted playsinline></video>
+                    <div class="video-info hidden" id="camera-info"></div>
+                </div>
+            </div>
+
+            <!-- Tab Visualizar -->
+            <div id="viewer-tab" class="card hidden">
+                <h2>👁️ Ver Cámaras</h2>
+                <div id="viewer-status"></div>
+                <div id="cameras-list" class="camera-grid"></div>
+                <div class="video-container hidden" id="viewer-video-container">
+                    <video id="viewer-video" autoplay playsinline controls></video>
+                    <div class="video-info" id="viewer-info"></div>
+                    <button class="btn" style="margin-top: 10px;" onclick="backToCameraList()">← Volver</button>
+                </div>
+            </div>
+
+            <!-- Tab Admin -->
+            <div id="admin-tab-content" class="card hidden">
+                <h2>⚙️ Panel de Administración</h2>
+                
+                <div style="margin-bottom: 20px;">
+                    <button class="btn" onclick="showUserModal()">+ Crear Usuario</button>
+                </div>
+
+                <h3 style="color: #38bdf8; margin-bottom: 15px;">👥 Usuarios Registrados</h3>
+                <div id="users-list">
+                    <p style="text-align: center; color: #94a3b8;">Cargando usuarios...</p>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Modal Crear/Editar Usuario -->
+    <div id="user-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Crear Usuario</h2>
+                <button class="modal-close" onclick="closeUserModal()">×</button>
+            </div>
+            <div class="input-group">
+                <label for="modal-username">Usuario:</label>
+                <input type="text" id="modal-username" placeholder="nombre_usuario">
+            </div>
+            <div class="input-group">
+                <label for="modal-password">Contraseña:</label>
+                <input type="password" id="modal-password" placeholder="********">
+                <small style="color: #94a3b8; display: block; margin-top: 5px;">
+                    Deja en blanco para mantener la contraseña actual (solo al editar)
+                </small>
+            </div>
+            <div class="input-group">
+                <label>Cámaras Permitidas:</label>
+                <div id="cameras-checkboxes" class="checkbox-group">
+                    <p style="color: #94a3b8;">No hay cámaras activas</p>
+                </div>
+                <small style="color: #94a3b8; display: block; margin-top: 5px;">
+                    Selecciona las cámaras que este usuario podrá ver
+                </small>
+            </div>
+            <div id="modal-status"></div>
+            <button class="btn" onclick="saveUser()">Guardar Usuario</button>
+            <button class="btn btn-secondary" onclick="closeUserModal()">Cancelar</button>
+        </div>
+    </div>
+
     <script>
+        // Variables globales
         let ws = null;
         let localStream = null;
         let peerConnections = new Map();
         let myId = null;
-        let currentMode = null;
+        let authToken = null;
+        let currentUser = null;
+        let currentTab = 'cameras';
+        let editingUser = null;
+        let availableCameras = [];
 
-        // Auto-detectar URL del servidor
-        window.addEventListener('DOMContentLoaded', () => {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const defaultUrl = `${protocol}//${window.location.host}`;
-            document.getElementById('server-url-camera').value = defaultUrl;
-            document.getElementById('server-url-viewer').value = defaultUrl;
+        // ==================== AUTENTICACIÓN ====================
 
-            // Event listeners para controles de cámara
-            setupCameraControls();
-        });
+        async function login() {
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!username || !password) {
+                showStatus('login-status', 'Por favor completa todos los campos', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    authToken = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem('authToken', authToken);
+                    showMainView();
+                } else {
+                    showStatus('login-status', data.error || 'Error al iniciar sesión', 'error');
+                }
+            } catch (error) {
+                showStatus('login-status', 'Error de conexión con el servidor', 'error');
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token: authToken })
+                });
+            } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+            }
+
+            // Limpiar conexiones
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if (ws) {
+                ws.close();
+            }
+            peerConnections.forEach(pc => pc.close());
+            peerConnections.clear();
+
+            // Limpiar estado
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('authToken');
+
+            // Volver al login
+            document.getElementById('main-view').classList.remove('active');
+            document.getElementById('login-view').classList.add('active');
+        }
+
+        async function verifySession() {
+            const token = localStorage.getItem('authToken');
+            if (!token) return false;
+
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ token })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    authToken = token;
+                    currentUser = data.user;
+                    return true;
+                }
+            } catch (error) {
+                console.error('Error verificando sesión:', error);
+            }
+
+            localStorage.removeItem('authToken');
+            return false;
+        }
+
+        function showMainView() {
+            document.getElementById('login-view').classList.remove('active');
+            document.getElementById('main-view').classList.add('active');
+
+            // Actualizar UI
+            document.getElementById('user-badge').textContent = currentUser.username;
+            
+            if (currentUser.role === 'admin') {
+                document.getElementById('role-badge').className = 'admin-badge';
+                document.getElementById('role-badge').textContent = '👑 Administrador';
+                document.getElementById('admin-tab').classList.remove('hidden');
+            } else {
+                document.getElementById('role-badge').className = 'user-badge';
+                document.getElementById('role-badge').textContent = '👤 Usuario';
+            }
+
+            // Cargar cámaras disponibles
+            loadAvailableCameras();
+        }
+
+        // ==================== NAVEGACIÓN ====================
+
+        function showTab(tabName) {
+            currentTab = tabName;
+
+            // Actualizar tabs
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Mostrar contenido
+            document.getElementById('cameras-tab').classList.add('hidden');
+            document.getElementById('viewer-tab').classList.add('hidden');
+            document.getElementById('admin-tab-content').classList.add('hidden');
+
+            if (tabName === 'cameras') {
+                document.getElementById('cameras-tab').classList.remove('hidden');
+            } else if (tabName === 'viewer') {
+                document.getElementById('viewer-tab').classList.remove('hidden');
+                connectViewer();
+            } else if (tabName === 'admin') {
+                document.getElementById('admin-tab-content').classList.remove('hidden');
+                loadUsers();
+            }
+        }
+
+        // ==================== CÁMARA ====================
 
         function setupCameraControls() {
-            // Brillo
             document.getElementById('brightness').addEventListener('input', (e) => {
                 document.getElementById('brightness-value').textContent = e.target.value;
                 applyVideoFilters();
             });
 
-            // Contraste
             document.getElementById('contrast').addEventListener('input', (e) => {
                 document.getElementById('contrast-value').textContent = e.target.value;
                 applyVideoFilters();
             });
 
-            // Zoom
             document.getElementById('zoom').addEventListener('input', (e) => {
                 document.getElementById('zoom-value').textContent = parseFloat(e.target.value).toFixed(1);
                 applyVideoZoom();
             });
 
-            // Modo nocturno
             document.getElementById('night-mode').addEventListener('change', (e) => {
                 const video = document.getElementById('camera-preview');
                 if (e.target.checked) {
@@ -412,41 +764,18 @@
             video.style.transformOrigin = 'center center';
         }
 
-        const iceServers = {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
-        };
-
-        function selectMode(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            
-            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
-            if (mode === 'camera') {
-                document.getElementById('camera-section').classList.add('active');
-            } else {
-                document.getElementById('viewer-section').classList.add('active');
-            }
-        }
-
-        function showStatus(elementId, message, type) {
-            const statusEl = document.getElementById(elementId);
-            statusEl.className = `status ${type}`;
-            statusEl.textContent = message;
-        }
-
         async function startCamera() {
             try {
-                const cameraName = document.getElementById('camera-name').value;
-                const serverUrl = document.getElementById('server-url-camera').value;
+                const cameraName = document.getElementById('camera-name').value.trim();
                 const quality = document.getElementById('video-quality').value;
+
+                if (!cameraName) {
+                    showStatus('camera-status', 'Por favor ingresa un nombre para la cámara', 'error');
+                    return;
+                }
 
                 showStatus('camera-status', 'Solicitando acceso a la cámara...', 'info');
 
-                // Configuración según calidad seleccionada
                 let videoConfig = {};
                 switch(quality) {
                     case 'high':
@@ -467,7 +796,7 @@
                             aspectRatio: 16/9
                         };
                         break;
-                    default: // medium
+                    default:
                         videoConfig = {
                             facingMode: 'environment',
                             width: { ideal: 1280, min: 854 },
@@ -477,28 +806,28 @@
                         };
                 }
 
-                // Configuración de alta calidad para video
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: videoConfig,
                     audio: false
                 });
 
                 document.getElementById('camera-preview').srcObject = localStream;
-                
-                // Aplicar configuraciones visuales iniciales
                 applyVideoFilters();
                 applyVideoZoom();
-                
-                ws = new WebSocket(serverUrl);
+
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}`;
+                ws = new WebSocket(wsUrl);
 
                 ws.onopen = () => {
                     ws.send(JSON.stringify({
                         type: 'register-camera',
-                        name: cameraName
+                        name: cameraName,
+                        token: authToken
                     }));
                     showStatus('camera-status', '✅ Cámara activa y transmitiendo', 'success');
                     document.getElementById('camera-info').classList.remove('hidden');
-                    document.getElementById('camera-info').textContent = `📡 ${cameraName} - Esperando conexiones...`;
+                    document.getElementById('camera-info').textContent = `📡 ${cameraName}`;
                     document.getElementById('start-camera-btn').classList.add('hidden');
                     document.getElementById('stop-camera-btn').classList.remove('hidden');
                 };
@@ -510,29 +839,29 @@
                         case 'registered':
                             myId = data.id;
                             break;
-
                         case 'viewer-joined':
                             await createPeerConnection(data.viewerId);
                             break;
-
                         case 'answer':
                             const pc = peerConnections.get(data.from);
                             if (pc) {
                                 await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                             }
                             break;
-
                         case 'ice-candidate':
                             const peerConn = peerConnections.get(data.from);
                             if (peerConn && data.candidate) {
                                 await peerConn.addIceCandidate(new RTCIceCandidate(data.candidate));
                             }
                             break;
+                        case 'error':
+                            showStatus('camera-status', `❌ ${data.message}`, 'error');
+                            break;
                     }
                 };
 
                 ws.onerror = () => {
-                    showStatus('camera-status', '❌ Error de conexión con el servidor', 'error');
+                    showStatus('camera-status', '❌ Error de conexión', 'error');
                 };
 
             } catch (error) {
@@ -541,38 +870,39 @@
         }
 
         async function createPeerConnection(viewerId) {
-            const pc = new RTCPeerConnection(iceServers);
+            const pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            });
             peerConnections.set(viewerId, pc);
 
             const quality = document.getElementById('video-quality').value;
             let maxBitrate, maxFramerate;
             
-            // Configurar bitrate según calidad
             switch(quality) {
                 case 'high':
-                    maxBitrate = 2500000; // 2.5 Mbps
+                    maxBitrate = 2500000;
                     maxFramerate = 30;
                     break;
                 case 'low':
-                    maxBitrate = 800000; // 800 Kbps
+                    maxBitrate = 800000;
                     maxFramerate = 20;
                     break;
-                default: // medium
-                    maxBitrate = 1500000; // 1.5 Mbps
+                default:
+                    maxBitrate = 1500000;
                     maxFramerate = 25;
             }
 
-            // Agregar tracks con configuración de alta calidad
             localStream.getTracks().forEach(track => {
                 const sender = pc.addTrack(track, localStream);
                 
-                // Configurar parámetros de codificación para mejor calidad
                 if (track.kind === 'video') {
                     const params = sender.getParameters();
                     if (!params.encodings) {
                         params.encodings = [{}];
                     }
-                    // Aumentar bitrate para mejor calidad
                     params.encodings[0].maxBitrate = maxBitrate;
                     params.encodings[0].maxFramerate = maxFramerate;
                     sender.setParameters(params).catch(e => console.log('Error setting params:', e));
@@ -589,7 +919,6 @@
                 }
             };
 
-            // Crear offer con configuración de alta calidad
             const offer = await pc.createOffer({
                 offerToReceiveVideo: true,
                 offerToReceiveAudio: false
@@ -622,20 +951,39 @@
             showStatus('camera-status', '', 'info');
         }
 
-        function connectViewer() {
-            const serverUrl = document.getElementById('server-url-viewer').value;
-            
-            showStatus('viewer-status', 'Conectando al servidor...', 'info');
+        // ==================== VISUALIZADOR ====================
 
-            ws = new WebSocket(serverUrl);
+        async function loadAvailableCameras() {
+            try {
+                const response = await fetch('/api/cameras', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                availableCameras = data.cameras || [];
+            } catch (error) {
+                console.error('Error cargando cámaras:', error);
+            }
+        }
+
+        function connectViewer() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                return;
+            }
+
+            showStatus('viewer-status', 'Conectando...', 'info');
+
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}`;
+            ws = new WebSocket(wsUrl);
 
             ws.onopen = () => {
                 ws.send(JSON.stringify({
-                    type: 'register-viewer'
+                    type: 'register-viewer',
+                    token: authToken
                 }));
-                showStatus('viewer-status', '✅ Conectado - Cargando cámaras...', 'success');
-                document.getElementById('connect-viewer-btn').classList.add('hidden');
-                document.getElementById('disconnect-viewer-btn').classList.remove('hidden');
+                showStatus('viewer-status', '✅ Conectado', 'success');
             };
 
             ws.onmessage = async (event) => {
@@ -645,25 +993,24 @@
                     case 'registered':
                         myId = data.id;
                         break;
-
                     case 'camera-list':
                         displayCameras(data.cameras);
                         break;
-
                     case 'offer':
                         await handleOffer(data.offer, data.from);
                         break;
-
                     case 'ice-candidate':
                         const pc = peerConnections.get(data.from);
                         if (pc && data.candidate) {
                             await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
                         }
                         break;
-
                     case 'camera-disconnected':
                         showStatus('viewer-status', '❌ La cámara se desconectó', 'error');
                         backToCameraList();
+                        break;
+                    case 'error':
+                        showStatus('viewer-status', `❌ ${data.message}`, 'error');
                         break;
                 }
             };
@@ -675,7 +1022,6 @@
 
         function displayCameras(cameras) {
             const listEl = document.getElementById('cameras-list');
-            listEl.classList.remove('hidden');
             
             if (cameras.length === 0) {
                 listEl.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay cámaras disponibles</p>';
@@ -691,8 +1037,8 @@
             `).join('');
         }
 
-        async function watchCamera(cameraId, cameraName) {
-            document.getElementById('cameras-list').classList.add('hidden');
+        function watchCamera(cameraId, cameraName) {
+            document.getElementById('cameras-list').style.display = 'none';
             document.getElementById('viewer-video-container').classList.remove('hidden');
             document.getElementById('viewer-info').textContent = `📹 ${cameraName}`;
 
@@ -703,14 +1049,17 @@
         }
 
         async function handleOffer(offer, cameraId) {
-            const pc = new RTCPeerConnection(iceServers);
+            const pc = new RTCPeerConnection({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' }
+                ]
+            });
             peerConnections.set(cameraId, pc);
 
             pc.ontrack = (event) => {
                 const video = document.getElementById('viewer-video');
                 video.srcObject = event.streams[0];
-                
-                // Forzar reproducción en alta calidad
                 video.onloadedmetadata = () => {
                     video.play().catch(e => console.log('Error playing video:', e));
                 };
@@ -727,8 +1076,6 @@
             };
 
             await pc.setRemoteDescription(new RTCSessionDescription(offer));
-            
-            // Crear answer con configuración para recibir alta calidad
             const answer = await pc.createAnswer({
                 offerToReceiveVideo: true,
                 offerToReceiveAudio: false
@@ -747,23 +1094,240 @@
             peerConnections.clear();
             document.getElementById('viewer-video').srcObject = null;
             document.getElementById('viewer-video-container').classList.add('hidden');
-            document.getElementById('cameras-list').classList.remove('hidden');
+            document.getElementById('cameras-list').style.display = 'grid';
         }
 
-        function disconnectViewer() {
+        // ==================== ADMINISTRACIÓN ====================
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/api/admin/users', {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                const data = await response.json();
+                
+                if (data.users) {
+                    displayUsers(data.users);
+                }
+            } catch (error) {
+                document.getElementById('users-list').innerHTML = 
+                    '<p style="text-align: center; color: #ef4444;">Error cargando usuarios</p>';
+            }
+        }
+
+        function displayUsers(users) {
+            if (users.length === 0) {
+                document.getElementById('users-list').innerHTML = 
+                    '<p style="text-align: center; color: #94a3b8;">No hay usuarios registrados</p>';
+                return;
+            }
+
+            const table = `
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>Usuario</th>
+                            <th>Rol</th>
+                            <th>Cámaras</th>
+                            <th>Creado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td>${user.username}</td>
+                                <td>${user.role === 'admin' ? '👑 Admin' : '👤 Usuario'}</td>
+                                <td>${user.role === 'admin' ? 'Todas' : (user.allowedCameras.length || 'Ninguna')}</td>
+                                <td>${new Date(user.createdAt).toLocaleDateString()}</td>
+                                <td>
+                                    ${user.username !== 'admin' ? `
+                                        <button class="btn btn-secondary btn-small" onclick="editUser('${user.username}')">Editar</button>
+                                        <button class="btn btn-danger btn-small" onclick="deleteUser('${user.username}')">Eliminar</button>
+                                    ` : '<span style="color: #64748b;">-</span>'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            document.getElementById('users-list').innerHTML = table;
+        }
+
+        async function showUserModal(username = null) {
+            editingUser = username;
+            document.getElementById('modal-title').textContent = username ? 'Editar Usuario' : 'Crear Usuario';
+            document.getElementById('modal-username').value = username || '';
+            document.getElementById('modal-password').value = '';
+            document.getElementById('modal-username').disabled = !!username;
+
+            // Cargar cámaras disponibles
+            await loadAvailableCameras();
+            
+            const checkboxesContainer = document.getElementById('cameras-checkboxes');
+            
+            if (availableCameras.length === 0) {
+                checkboxesContainer.innerHTML = '<p style="color: #94a3b8;">No hay cámaras activas actualmente</p>';
+            } else {
+                let userCameras = [];
+                if (username) {
+                    try {
+                        const response = await fetch('/api/admin/users', {
+                            headers: { 'Authorization': `Bearer ${authToken}` }
+                        });
+                        const data = await response.json();
+                        const user = data.users.find(u => u.username === username);
+                        if (user) {
+                            userCameras = user.allowedCameras;
+                        }
+                    } catch (error) {
+                        console.error('Error cargando usuario:', error);
+                    }
+                }
+
+                checkboxesContainer.innerHTML = availableCameras.map(cam => `
+                    <label>
+                        <input type="checkbox" value="${cam.id}" ${userCameras.includes(cam.id) ? 'checked' : ''}>
+                        ${cam.name}
+                    </label>
+                `).join('');
+            }
+
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+            document.getElementById('modal-status').innerHTML = '';
+            editingUser = null;
+        }
+
+        async function saveUser() {
+            const username = document.getElementById('modal-username').value.trim();
+            const password = document.getElementById('modal-password').value;
+            
+            const checkboxes = document.querySelectorAll('#cameras-checkboxes input[type="checkbox"]:checked');
+            const allowedCameras = Array.from(checkboxes).map(cb => cb.value);
+
+            if (!username) {
+                showStatus('modal-status', 'El nombre de usuario es requerido', 'error');
+                return;
+            }
+
+            if (!editingUser && !password) {
+                showStatus('modal-status', 'La contraseña es requerida', 'error');
+                return;
+            }
+
+            try {
+                const url = editingUser 
+                    ? `/api/admin/users/${editingUser}` 
+                    : '/api/admin/users';
+                
+                const method = editingUser ? 'PUT' : 'POST';
+                
+                const body = { allowedCameras };
+                if (!editingUser) {
+                    body.username = username;
+                }
+                if (password) {
+                    body.password = password;
+                }
+
+                const response = await fetch(url, {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showStatus('modal-status', `✅ ${data.message}`, 'success');
+                    setTimeout(() => {
+                        closeUserModal();
+                        loadUsers();
+                    }, 1500);
+                } else {
+                    showStatus('modal-status', `❌ ${data.error}`, 'error');
+                }
+            } catch (error) {
+                showStatus('modal-status', '❌ Error de conexión', 'error');
+            }
+        }
+
+        async function editUser(username) {
+            showUserModal(username);
+        }
+
+        async function deleteUser(username) {
+            if (!confirm(`¿Estás seguro de eliminar al usuario "${username}"?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/admin/users/${username}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadUsers();
+                } else {
+                    alert(`Error: ${data.error}`);
+                }
+            } catch (error) {
+                alert('Error de conexión');
+            }
+        }
+
+        // ==================== UTILIDADES ====================
+
+        function showStatus(elementId, message, type) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.className = `status ${type}`;
+            statusEl.textContent = message;
+            if (!message) statusEl.style.display = 'none';
+            else statusEl.style.display = 'block';
+        }
+
+        // ==================== INICIALIZACIÓN ====================
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            setupCameraControls();
+
+            // Verificar sesión existente
+            const hasSession = await verifySession();
+            if (hasSession) {
+                showMainView();
+            }
+
+            // Enter para login
+            document.getElementById('login-password').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    login();
+                }
+            });
+        });
+
+        // Limpiar al cerrar
+        window.addEventListener('beforeunload', () => {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
             if (ws) {
                 ws.close();
             }
-            peerConnections.forEach(pc => pc.close());
-            peerConnections.clear();
-            
-            document.getElementById('viewer-video').srcObject = null;
-            document.getElementById('cameras-list').classList.add('hidden');
-            document.getElementById('viewer-video-container').classList.add('hidden');
-            document.getElementById('connect-viewer-btn').classList.remove('hidden');
-            document.getElementById('disconnect-viewer-btn').classList.add('hidden');
-            showStatus('viewer-status', '', 'info');
-        }
+        });
     </script>
 </body>
 </html>
