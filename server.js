@@ -308,6 +308,24 @@ app.delete('/api/admin/camera-configs/:id', requireAdmin, (req, res) => {
   res.json({ success: true, message: 'Cámara eliminada' });
 });
 
+// Obtener cámaras para dispositivos con clave de cámara
+app.get('/api/camera-configs', (req, res) => {
+  const key = req.headers.authorization?.replace('Bearer ', '');
+  
+  if (key !== CAMERA_SECRET) {
+    return res.status(401).json({ error: 'Clave de cámara incorrecta' });
+  }
+
+  const configs = Array.from(cameraConfigs.values()).map(c => ({
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    location: c.location
+  }));
+  
+  res.json({ cameras: configs });
+});
+
 // Obtener cámaras para usuario
 app.get('/api/cameras', (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');

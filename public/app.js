@@ -241,14 +241,24 @@ async function showCameraView() {
     document.getElementById('camera-view').classList.add('active');
 
     const select = document.getElementById('camera-select');
-    select.innerHTML = '<option value="">Selecciona una cámara...</option>';
+    select.innerHTML = '<option value="">Cargando cámaras...</option>';
     
-    allCameraConfigs.forEach(cam => {
-        const option = document.createElement('option');
-        option.value = cam.id;
-        option.textContent = `${cam.name} - ${cam.location || 'Sin ubicación'}`;
-        select.appendChild(option);
-    });
+    // Dar tiempo para que carguen las configs
+    setTimeout(() => {
+        select.innerHTML = '<option value="">Selecciona una cámara...</option>';
+        
+        if (allCameraConfigs.length === 0) {
+            select.innerHTML = '<option value="">No hay cámaras registradas</option>';
+            showStatus('camera-status', 'No hay cámaras registradas en el sistema. Contacta al administrador.', 'error');
+        } else {
+            allCameraConfigs.forEach(cam => {
+                const option = document.createElement('option');
+                option.value = cam.id;
+                option.textContent = `${cam.name}${cam.location ? ' - ' + cam.location : ''}`;
+                select.appendChild(option);
+            });
+        }
+    }, 500);
 }
 
 // ==================== NAVEGACIÓN ====================
@@ -343,15 +353,19 @@ function applyVideoZoom() {
 // ==================== CÁMARA ====================
 async function loadCameraConfigs() {
     try {
-        const response = await fetch('/api/admin/camera-configs', {
+        const response = await fetch('/api/camera-configs', {
             headers: { 'Authorization': `Bearer ${cameraKey}` }
         });
+        
         if (!response.ok) {
+            console.error('Error al cargar cámaras:', response.status);
             allCameraConfigs = [];
             return;
         }
+        
         const data = await response.json();
         allCameraConfigs = data.cameras || [];
+        console.log('Cámaras cargadas:', allCameraConfigs.length);
     } catch (error) {
         console.error('Error cargando configuraciones:', error);
         allCameraConfigs = [];
