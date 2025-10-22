@@ -401,11 +401,13 @@ wss.on('connection', (ws) => {
 
           const config = cameraConfigs.get(data.cameraId);
           
+          // Usar el cameraId proporcionado, no el connectionId
           cameras.set(data.cameraId, {
             ws,
             name: config.name,
             configId: data.cameraId,
-            viewers: new Set()
+            viewers: new Set(),
+            connectionId: connectionId // Guardar el connectionId para cerrar la conexión
           });
           
           ws.send(JSON.stringify({
@@ -500,9 +502,9 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    // Buscar cámara por connectionId en los valores
+    // Buscar y limpiar cámara
     for (const [cameraId, camera] of cameras.entries()) {
-      if (camera.ws === ws) {
+      if (camera.connectionId === connectionId || camera.ws === ws) {
         camera.viewers.forEach(viewerId => {
           const viewer = viewers.get(viewerId);
           if (viewer) {

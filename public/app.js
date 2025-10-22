@@ -441,8 +441,9 @@ async function startCamera() {
             
             switch(data.type) {
                 case 'registered':
-                    myId = data.id;
+                    myId = data.id; // Este es el cameraId, no el connectionId
                     const cameraName = data.name;
+                    console.log('✅ Cámara registrada con ID:', myId);
                     showStatus('camera-status', '✅ Transmitiendo', 'success');
                     document.getElementById('camera-info').classList.remove('hidden');
                     document.getElementById('camera-info').textContent = `📡 ${cameraName}`;
@@ -451,11 +452,13 @@ async function startCamera() {
                     document.getElementById('stop-camera-btn').classList.remove('hidden');
                     break;
                 case 'viewer-joined':
+                    console.log('👁️ Viewer conectado:', data.viewerId);
                     await createPeerConnection(data.viewerId);
                     break;
                 case 'answer':
                     const pc = peerConnections.get(data.from);
                     if (pc) {
+                        console.log('📥 Respuesta recibida de viewer:', data.from);
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
                     }
                     break;
@@ -482,6 +485,8 @@ async function startCamera() {
 }
 
 async function createPeerConnection(viewerId) {
+    console.log('🔗 Creando conexión peer para viewer:', viewerId);
+    
     const pc = new RTCPeerConnection(iceServers);
     peerConnections.set(viewerId, pc);
 
@@ -526,11 +531,17 @@ async function createPeerConnection(viewerId) {
         }
     };
 
+    pc.onconnectionstatechange = () => {
+        console.log('🔗 Estado conexión con viewer:', pc.connectionState);
+    };
+
     const offer = await pc.createOffer({
         offerToReceiveVideo: true,
         offerToReceiveAudio: false
     });
     await pc.setLocalDescription(offer);
+
+    console.log('📤 Enviando oferta a viewer:', viewerId);
 
     ws.send(JSON.stringify({
         type: 'offer',
@@ -616,8 +627,10 @@ function connectViewer() {
 function displayCameras(cameras) {
     const listEl = document.getElementById('cameras-list');
     
+    console.log('📹 Mostrando cámaras:', cameras);
+    
     if (cameras.length === 0) {
-        listEl.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay cámaras disponibles</p>';
+        listEl.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay cámaras disponibles o no tienes permisos asignados</p>';
         return;
     }
 
@@ -633,6 +646,8 @@ function displayCameras(cameras) {
 }
 
 function watchCamera(cameraId, cameraName) {
+    console.log('🎥 Solicitando ver cámara:', cameraId, cameraName);
+    
     document.getElementById('cameras-list').style.display = 'none';
     document.getElementById('viewer-video-container').classList.remove('hidden');
     document.getElementById('viewer-info').textContent = `📹 ${cameraName}`;
@@ -641,16 +656,22 @@ function watchCamera(cameraId, cameraName) {
         type: 'request-camera',
         cameraId: cameraId
     }));
+    
+    console.log('📤 Solicitud enviada al servidor');
 }
 
 async function handleOffer(offer, cameraId) {
+    console.log('📥 Recibida oferta de cámara:', cameraId);
+    
     const pc = new RTCPeerConnection(iceServers);
     peerConnections.set(cameraId, pc);
 
     pc.ontrack = (event) => {
+        console.log('✅ Stream recibido!');
         const video = document.getElementById('viewer-video');
         video.srcObject = event.streams[0];
         video.onloadedmetadata = () => {
+            console.log('▶️ Reproduciendo video');
             video.play().catch(e => console.log('Error playing video:', e));
         };
     };
@@ -665,6 +686,10 @@ async function handleOffer(offer, cameraId) {
         }
     };
 
+    pc.onconnectionstatechange = () => {
+        console.log('🔗 Estado de conexión:', pc.connectionState);
+    };
+
     await pc.setRemoteDescription(new RTCSessionDescription(offer));
     const answer = await pc.createAnswer({
         offerToReceiveVideo: true,
@@ -672,6 +697,8 @@ async function handleOffer(offer, cameraId) {
     });
     await pc.setLocalDescription(answer);
 
+    console.log('📤 Enviando respuesta a cámara');
+    
     ws.send(JSON.stringify({
         type: 'answer',
         answer: answer,
