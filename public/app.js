@@ -460,11 +460,14 @@ async function startCamera() {
                     if (pc) {
                         console.log('📥 Respuesta recibida de viewer:', data.from);
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    } else {
+                        console.log('❌ No se encontró peer connection para viewer:', data.from);
                     }
                     break;
                 case 'ice-candidate':
                     const peerConn = peerConnections.get(data.from);
                     if (peerConn && data.candidate) {
+                        console.log('🧊 ICE candidate de:', data.from);
                         await peerConn.addIceCandidate(new RTCIceCandidate(data.candidate));
                     }
                     break;
@@ -526,7 +529,8 @@ async function createPeerConnection(viewerId) {
             ws.send(JSON.stringify({
                 type: 'ice-candidate',
                 candidate: event.candidate,
-                target: viewerId
+                target: viewerId,
+                from: myId // Usar el cameraId
             }));
         }
     };
@@ -541,12 +545,13 @@ async function createPeerConnection(viewerId) {
     });
     await pc.setLocalDescription(offer);
 
-    console.log('📤 Enviando oferta a viewer:', viewerId);
+    console.log('📤 Enviando oferta a viewer:', viewerId, 'desde cámara:', myId);
 
     ws.send(JSON.stringify({
         type: 'offer',
         offer: offer,
-        target: viewerId
+        target: viewerId,
+        from: myId // Usar el cameraId como origen
     }));
 
     document.getElementById('camera-info').textContent = `📡 ${peerConnections.size} espectador(es)`;
@@ -596,6 +601,7 @@ function connectViewer() {
         switch(data.type) {
             case 'registered':
                 myId = data.id;
+                console.log('✅ Viewer registrado con ID:', myId);
                 break;
             case 'camera-list':
                 displayCameras(data.cameras);
@@ -661,13 +667,13 @@ function watchCamera(cameraId, cameraName) {
 }
 
 async function handleOffer(offer, cameraId) {
-    console.log('📥 Recibida oferta de cámara:', cameraId);
+    console.log('📥 Recibida oferta de cámara:', cameraId, 'Mi ID:', myId);
     
     const pc = new RTCPeerConnection(iceServers);
     peerConnections.set(cameraId, pc);
 
     pc.ontrack = (event) => {
-        console.log('✅ Stream recibido!');
+        console.log('✅ Stream recibido de cámara:', cameraId);
         const video = document.getElementById('viewer-video');
         video.srcObject = event.streams[0];
         video.onloadedmetadata = () => {
@@ -681,7 +687,8 @@ async function handleOffer(offer, cameraId) {
             ws.send(JSON.stringify({
                 type: 'ice-candidate',
                 candidate: event.candidate,
-                target: cameraId
+                target: cameraId,
+                from: myId // Enviar mi ID como origen
             }));
         }
     };
@@ -697,12 +704,13 @@ async function handleOffer(offer, cameraId) {
     });
     await pc.setLocalDescription(answer);
 
-    console.log('📤 Enviando respuesta a cámara');
+    console.log('📤 Enviando respuesta a cámara:', cameraId, 'desde viewer:', myId);
     
     ws.send(JSON.stringify({
         type: 'answer',
         answer: answer,
-        target: cameraId
+        target: cameraId,
+        from: myId // Enviar mi ID como origen
     }));
 }
 
