@@ -1,12 +1,13 @@
-# 🎥 Sistema de Vigilancia con WebRTC y Autenticación
+# 🎥 Sistema de Vigilancia con WebRTC y Autenticación Mejorada
 
-Sistema completo de vigilancia usando celulares Android como cámaras, con transmisión en tiempo real, **sistema de usuarios con permisos** y panel de administración.
+Sistema completo de vigilancia usando celulares Android como cámaras, con transmisión en tiempo real, **sistema de usuarios con permisos**, **gestión centralizada de cámaras** y panel de administración.
 
 ## ✨ Características
 
-- 🔐 **Sistema de autenticación** con login seguro
-- 👑 **Panel de administración** para gestionar usuarios
-- 🎯 **Permisos por cámara** (cada usuario ve solo sus cámaras asignadas)
+- 🔐 **Sistema de autenticación** con roles separados
+- 🎥 **Cámaras independientes**: Activar con clave única (no requiere usuario)
+- 👑 **Panel de administración** completo para gestionar usuarios y cámaras
+- 🎯 **Permisos granulares**: Cada usuario ve solo sus cámaras asignadas
 - 📹 **Múltiples cámaras** simultáneas
 - 🌐 **Acceso remoto** desde cualquier lugar
 - 🎨 **Controles avanzados**: Brillo, Contraste, Zoom
@@ -15,18 +16,40 @@ Sistema completo de vigilancia usando celulares Android como cámaras, con trans
 - 🔒 **WebRTC** para baja latencia y conexión P2P
 - 💯 **100% Gratis** usando tier gratuito de Render.com
 
-## 🔐 Sistema de Usuarios
+## 🔐 Sistema Mejorado
 
-### Roles
-- **Administrador**: Acceso completo a todas las cámaras y gestión de usuarios
-- **Usuario**: Solo puede ver las cámaras que le fueron asignadas
+### **Separación de Roles**
 
-### Credenciales por Defecto
+#### **👑 Administrador**
+- Acceso completo a todas las cámaras
+- Registra cámaras en el sistema
+- Crea usuarios y asigna permisos
+- Gestiona configuraciones
+
+#### **👤 Usuario** 
+- Solo visualiza cámaras asignadas
+- No puede activar cámaras
+- Acceso limitado según permisos
+
+#### **📹 Dispositivo Cámara**
+- Usa clave de cámara única
+- Se conecta a una cámara registrada
+- No requiere usuario individual
+
+### **Credenciales por Defecto**
+
+**Admin:**
 ```
 Usuario: admin
 Contraseña: admin123
 ```
-⚠️ **IMPORTANTE**: Cambia la contraseña del admin después de la primera instalación
+
+**Clave de Cámara:**
+```
+Clave: camara2024secret
+```
+
+⚠️ **IMPORTANTE**: Cambia estas credenciales después de la instalación
 
 ## 📦 Estructura del Proyecto
 
@@ -72,86 +95,101 @@ sistema-vigilancia/
    - **Schedule:** Every 10 minutes (`*/10 * * * *`)
 4. Guarda y activa
 
-## 📱 Uso
+## 📱 Flujo de Trabajo Completo
 
-### 1️⃣ Primer Login (Administrador)
+### **Paso 1: Configuración Inicial (Admin)**
 
-1. Abre el navegador y ve a: `https://tu-app.onrender.com`
-2. Inicia sesión con:
-   - **Usuario:** `admin`
-   - **Contraseña:** `admin123`
-3. Serás redirigido al panel principal
+1. Accede como admin: `admin / admin123`
+2. Ve a **⚙️ Administración** → **📹 Cámaras**
+3. Registra todas tus cámaras:
+   - Click **"+ Registrar Cámara"**
+   - Nombre: `Entrada Principal`
+   - Ubicación: `Planta Baja`
+   - Descripción: `Vista frontal de entrada`
+   - Guardar y repetir para cada ubicación
 
-### 2️⃣ Crear Usuarios (Solo Admin)
+4. Ve a **👥 Usuarios**
+5. Crea usuarios para cada persona:
+   - Click **"+ Crear Usuario"**
+   - Usuario: `juan_seguridad`
+   - Contraseña: `Juan2024!`
+   - Marca las cámaras que puede ver: ✅ Entrada, ✅ Patio
+   - Guardar
 
-1. Ve a la pestaña **"⚙️ Administración"**
-2. Click en **"+ Crear Usuario"**
-3. Completa el formulario:
-   - **Usuario:** nombre_usuario
-   - **Contraseña:** contraseña_segura
-   - **Cámaras Permitidas:** Marca las cámaras que el usuario podrá ver
-4. Click en **"Guardar Usuario"**
-
-**Nota:** Para asignar cámaras, primero debes tener cámaras activas
-
-### 3️⃣ Configurar Cámaras
+### **Paso 2: Activar Cámaras (Dispositivos)**
 
 **En cada celular que será cámara:**
 
-1. Inicia sesión con el usuario admin (o cualquier usuario si quieres)
-2. Ve a la pestaña **"📹 Cámaras"**
-3. Configura:
-   - **Nombre:** Ej. "Entrada Principal", "Patio", "Garaje"
-   - **Calidad:** Media (recomendada)
-   - **Modo Nocturno:** Activar si es de noche
-   - **Ajustes visuales:** Brillo, Contraste, Zoom
-4. Click **"Iniciar Cámara"**
-5. Acepta permisos de cámara
-6. Déjalo transmitiendo
+1. Abre el navegador y ve a tu URL
+2. En el login, selecciona la pestaña **"📹 Cámara"**
+3. Ingresa la clave: `camara2024secret`
+4. Selecciona del menú: `Entrada Principal` (o la que corresponda)
+5. Configura calidad (Media recomendada)
+6. Ajusta brillo/contraste si es necesario
+7. Click **"Iniciar Transmisión"**
+8. Deja el celular enchufado y transmitiendo
 
-### 4️⃣ Asignar Permisos
+### **Paso 3: Visualizar (Usuarios)**
 
-**Después de activar las cámaras:**
+**En el celular personal del usuario:**
 
-1. Vuelve al panel de admin
-2. Edita los usuarios que creaste
-3. Ahora aparecerán las cámaras activas para seleccionar
-4. Marca las cámaras que cada usuario podrá ver
-5. Guarda los cambios
+1. Abre el navegador y ve a tu URL
+2. En el login, pestaña **"👤 Usuario"**
+3. Ingresa credenciales: `juan_seguridad / Juan2024!`
+4. Verás solo las cámaras asignadas
+5. Toca una cámara para ver el video en vivo
 
-### 5️⃣ Visualizar (Usuarios)
+## 👥 Gestión (Admin)
 
-**En el celular de cada usuario:**
+### **Gestionar Cámaras**
 
-1. Inicia sesión con sus credenciales
-2. Ve a la pestaña **"👁️ Visualizar"**
-3. Verás solo las cámaras que te fueron asignadas
-4. Toca una cámara para ver el video en vivo
+**Registrar nueva cámara:**
+1. Admin → 📹 Cámaras → + Registrar Cámara
+2. Completar datos y guardar
 
-## 👥 Gestión de Usuarios (Admin)
+**Editar cámara:**
+1. Click "Editar" junto a la cámara
+2. Modificar nombre, ubicación o descripción
+3. Guardar (actualiza en usuarios automáticamente)
 
-### Crear Usuario
-1. Panel Admin → **"+ Crear Usuario"**
-2. Define usuario y contraseña
-3. Selecciona cámaras permitidas
+**Eliminar cámara:**
+1. Click "Eliminar"
+2. Confirmar (se quita de todos los permisos)
+
+**Ver estado:**
+- 🟢 Activa: Transmitiendo ahora
+- ⚫ Inactiva: Registrada pero no transmitiendo
+
+### **Gestionar Usuarios**
+
+**Crear usuario:**
+1. Admin → 👥 Usuarios → + Crear Usuario
+2. Completar datos
+3. Seleccionar cámaras permitidas
 4. Guardar
 
-### Editar Permisos
-1. Panel Admin → **"Editar"** junto al usuario
-2. Modifica cámaras permitidas
-3. Cambia contraseña (opcional)
+**Editar permisos:**
+1. Click "Editar" junto al usuario
+2. Modificar cámaras permitidas
+3. Cambiar contraseña (opcional)
 4. Guardar
 
-### Eliminar Usuario
-1. Panel Admin → **"Eliminar"** junto al usuario
-2. Confirmar eliminación
-3. El usuario perderá acceso inmediatamente
+**Eliminar usuario:**
+1. Click "Eliminar"
+2. Confirmar (sesiones activas se cierran automáticamente)
 
-### Consideraciones
-- El usuario **admin** no puede ser eliminado ni degradado
-- Los usuarios solo ven cámaras que estén activas Y asignadas
-- Al eliminar un usuario, sus sesiones activas se cierran automáticamente
-- Las sesiones expiran después de 24 horas de inactividad
+### **Cambiar Clave de Cámara**
+
+Por seguridad, la clave de cámara puede cambiarse:
+
+**Opción 1: Variable de entorno (Recomendada)**
+- En Render → Settings → Environment Variables
+- Agregar: `CAMERA_SECRET=tu_nueva_clave_segura`
+- Redeploy
+
+**Opción 2: Código**
+- Modificar en `server.js`: `const CAMERA_SECRET = 'tu_nueva_clave';`
+- Commit y push
 
 ### 🎨 Ajustes Visuales
 - **Brillo:** 50% - 200% (por defecto: 100%)

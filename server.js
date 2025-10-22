@@ -1,4 +1,4 @@
-// Servidor de señalización WebRTC con autenticación
+// Servidor de señalización WebRTC con autenticación mejorada
 // Instalar dependencias: npm install express ws uuid bcryptjs
 
 const express = require('express');
@@ -10,13 +10,16 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware para parsear JSON
 app.use(express.json());
 app.use(express.static('public'));
 
-// Base de datos en memoria (en producción usar MongoDB, PostgreSQL, etc.)
+// Base de datos en memoria
 const users = new Map();
 const sessions = new Map();
+const cameraConfigs = new Map(); // Configuraciones de cámaras registradas
+
+// Clave secreta para activar cámaras (cámbiala en producción)
+const CAMERA_SECRET = process.env.CAMERA_SECRET || 'camara2024secret';
 
 // Crear usuario admin por defecto
 const adminPassword = bcrypt.hashSync('admin123', 10);
@@ -24,19 +27,21 @@ users.set('admin', {
   username: 'admin',
   password: adminPassword,
   role: 'admin',
-  allowedCameras: [], // Admin puede ver todas
+  allowedCameras: [],
   createdAt: new Date().toISOString()
 });
 
-console.log('🔐 Usuario admin creado - Usuario: admin, Contraseña: admin123');
+console.log('🔐 Usuario admin creado');
+console.log('   Usuario: admin');
+console.log('   Contraseña: admin123');
+console.log('🎥 Clave de cámara: ' + CAMERA_SECRET);
 
-// Almacenar conexiones
-const cameras = new Map(); // id -> {ws, name, viewers: Set, ownerId}
+// Almacenar conexiones activas
+const cameras = new Map(); // id -> {ws, name, configId, viewers: Set}
 const viewers = new Map(); // id -> {ws, watchingCamera, userId}
 
-// ==================== RUTAS DE AUTENTICACIÓN ====================
+// ==================== AUTENTICACIÓN ====================
 
-// Login
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
   
@@ -68,7 +73,6 @@ app.post('/api/login', (req, res) => {
   });
 });
 
-// Verificar sesión
 app.post('/api/verify', (req, res) => {
   const { token } = req.body;
   const session = sessions.get(token);
@@ -88,16 +92,25 @@ app.post('/api/verify', (req, res) => {
   });
 });
 
-// Logout
 app.post('/api/logout', (req, res) => {
   const { token } = req.body;
   sessions.delete(token);
   res.json({ success: true });
 });
 
-// ==================== RUTAS DE ADMINISTRACIÓN ====================
+// Verificar clave de cámara
+app.post('/api/verify-camera-key', (req, res) => {
+  const { key } = req.body;
+  
+  if (key === CAMERA_SECRET) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ error: 'Clave de cámara incorrecta' });
+  }
+});
 
-// Middleware para verificar admin
+// ==================== MIDDLEWARE ====================
+
 const requireAdmin = (req, res, next) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   const session = sessions.get(token);
@@ -110,7 +123,8 @@ const requireAdmin = (req, res, next) => {
   next();
 };
 
-// Obtener todos los usuarios
+// ==================== GESTIÓN DE USUARIOS ====================
+
 app.get('/api/admin/users', requireAdmin, (req, res) => {
   const userList = Array.from(users.values()).map(u => ({
     username: u.username,
@@ -121,7 +135,6 @@ app.get('/api/admin/users', requireAdmin, (req, res) => {
   res.json({ users: userList });
 });
 
-// Crear usuario
 app.post('/api/admin/users', requireAdmin, (req, res) => {
   const { username, password, allowedCameras } = req.body;
 
@@ -153,7 +166,6 @@ app.post('/api/admin/users', requireAdmin, (req, res) => {
   });
 });
 
-// Actualizar usuario
 app.put('/api/admin/users/:username', requireAdmin, (req, res) => {
   const { username } = req.params;
   const { password, allowedCameras } = req.body;
@@ -179,7 +191,6 @@ app.put('/api/admin/users/:username', requireAdmin, (req, res) => {
   res.json({ success: true, message: 'Usuario actualizado' });
 });
 
-// Eliminar usuario
 app.delete('/api/admin/users/:username', requireAdmin, (req, res) => {
   const { username } = req.params;
 
@@ -193,7 +204,6 @@ app.delete('/api/admin/users/:username', requireAdmin, (req, res) => {
 
   users.delete(username);
   
-  // Cerrar sesiones activas del usuario
   for (const [token, session] of sessions.entries()) {
     if (session.username === username) {
       sessions.delete(token);
@@ -203,7 +213,102 @@ app.delete('/api/admin/users/:username', requireAdmin, (req, res) => {
   res.json({ success: true, message: 'Usuario eliminado' });
 });
 
-// Obtener lista de cámaras disponibles
+// ==================== GESTIÓN DE CÁMARAS ====================
+
+app.get('/api/admin/camera-configs', requireAdmin, (req, res) => {
+  const configs = Array.from(cameraConfigs.values()).map(c => ({
+    id: c.id,
+    name: c.name,
+    description: c.description,
+    location: c.location,
+    isActive: cameras.has(c.id),
+    createdAt: c.createdAt
+  }));
+  res.json({ cameras: configs });
+});
+
+app.post('/api/admin/camera-configs', requireAdmin, (req, res) => {
+  const { name, description, location } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'El nombre es requerido' });
+  }
+
+  const id = uuidv4();
+  cameraConfigs.set(id, {
+    id,
+    name,
+    description: description || '',
+    location: location || '',
+    createdAt: new Date().toISOString()
+  });
+
+  res.json({ 
+    success: true, 
+    message: 'Cámara registrada',
+    camera: {
+      id,
+      name,
+      description,
+      location
+    }
+  });
+});
+
+app.put('/api/admin/camera-configs/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+  const { name, description, location } = req.body;
+
+  const config = cameraConfigs.get(id);
+  if (!config) {
+    return res.status(404).json({ error: 'Cámara no encontrada' });
+  }
+
+  if (name) config.name = name;
+  if (description !== undefined) config.description = description;
+  if (location !== undefined) config.location = location;
+
+  cameraConfigs.set(id, config);
+  
+  // Actualizar nombre en conexión activa si existe
+  if (cameras.has(id)) {
+    const camera = cameras.get(id);
+    camera.name = name;
+    cameras.set(id, camera);
+    broadcastCameraList();
+  }
+
+  res.json({ success: true, message: 'Cámara actualizada' });
+});
+
+app.delete('/api/admin/camera-configs/:id', requireAdmin, (req, res) => {
+  const { id } = req.params;
+
+  if (!cameraConfigs.has(id)) {
+    return res.status(404).json({ error: 'Cámara no encontrada' });
+  }
+
+  // Desconectar cámara si está activa
+  if (cameras.has(id)) {
+    const camera = cameras.get(id);
+    camera.ws.close();
+    cameras.delete(id);
+  }
+
+  cameraConfigs.delete(id);
+
+  // Remover de permisos de usuarios
+  for (const [username, user] of users.entries()) {
+    if (user.allowedCameras.includes(id)) {
+      user.allowedCameras = user.allowedCameras.filter(cid => cid !== id);
+      users.set(username, user);
+    }
+  }
+
+  res.json({ success: true, message: 'Cámara eliminada' });
+});
+
+// Obtener cámaras para usuario
 app.get('/api/cameras', (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   const session = sessions.get(token);
@@ -215,10 +320,11 @@ app.get('/api/cameras', (req, res) => {
   const cameraList = Array.from(cameras.entries()).map(([id, camera]) => ({
     id,
     name: camera.name,
-    viewers: camera.viewers.size
+    viewers: camera.viewers.size,
+    description: cameraConfigs.get(id)?.description || '',
+    location: cameraConfigs.get(id)?.location || ''
   }));
 
-  // Filtrar cámaras según permisos
   let filteredCameras = cameraList;
   if (session.role !== 'admin') {
     filteredCameras = cameraList.filter(cam => 
@@ -236,6 +342,7 @@ app.get('/ping', (req, res) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     cameras: cameras.size,
+    cameraConfigs: cameraConfigs.size,
     viewers: viewers.size,
     users: users.size,
     sessions: sessions.size
@@ -260,33 +367,41 @@ wss.on('connection', (ws) => {
       
       switch(data.type) {
         case 'register-camera':
-          // Registrar nueva cámara con token de autenticación
-          const cameraSession = sessions.get(data.token);
-          if (!cameraSession) {
-            ws.send(JSON.stringify({ type: 'error', message: 'No autenticado' }));
+          // Verificar clave de cámara
+          if (data.key !== CAMERA_SECRET) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Clave de cámara incorrecta' }));
             ws.close();
             return;
           }
 
-          cameras.set(connectionId, {
+          // Verificar que la cámara esté registrada
+          if (!cameraConfigs.has(data.cameraId)) {
+            ws.send(JSON.stringify({ type: 'error', message: 'Cámara no registrada en el sistema' }));
+            ws.close();
+            return;
+          }
+
+          const config = cameraConfigs.get(data.cameraId);
+          
+          cameras.set(data.cameraId, {
             ws,
-            name: data.name || `Cámara ${cameras.size + 1}`,
-            viewers: new Set(),
-            ownerId: cameraSession.username
+            name: config.name,
+            configId: data.cameraId,
+            viewers: new Set()
           });
           
           ws.send(JSON.stringify({
             type: 'registered',
-            id: connectionId,
-            role: 'camera'
+            id: data.cameraId,
+            role: 'camera',
+            name: config.name
           }));
           
           broadcastCameraList();
-          console.log(`📹 Cámara registrada: ${data.name} (ID: ${connectionId})`);
+          console.log(`📹 Cámara conectada: ${config.name} (ID: ${data.cameraId})`);
           break;
 
         case 'register-viewer':
-          // Registrar viewer con autenticación
           const viewerSession = sessions.get(data.token);
           if (!viewerSession) {
             ws.send(JSON.stringify({ type: 'error', message: 'No autenticado' }));
@@ -309,11 +424,10 @@ wss.on('connection', (ws) => {
           }));
           
           sendCameraList(ws, viewerSession);
-          console.log(`👁️ Viewer registrado: ${viewerSession.username}`);
+          console.log(`👁️ Viewer conectado: ${viewerSession.username}`);
           break;
 
         case 'request-camera':
-          // Verificar permisos antes de conectar
           const viewer = viewers.get(connectionId);
           const camera = cameras.get(data.cameraId);
           
@@ -322,7 +436,6 @@ wss.on('connection', (ws) => {
             return;
           }
 
-          // Verificar permisos
           if (viewer.role !== 'admin' && !viewer.allowedCameras.includes(data.cameraId)) {
             ws.send(JSON.stringify({ type: 'error', message: 'No tienes permiso para ver esta cámara' }));
             return;
@@ -340,7 +453,6 @@ wss.on('connection', (ws) => {
         case 'offer':
         case 'answer':
         case 'ice-candidate':
-          // Reenviar mensajes de señalización WebRTC
           const targetId = data.target;
           const targetCamera = cameras.get(targetId);
           const targetViewer = viewers.get(targetId);
@@ -364,20 +476,23 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
-    if (cameras.has(connectionId)) {
-      const camera = cameras.get(connectionId);
-      camera.viewers.forEach(viewerId => {
-        const viewer = viewers.get(viewerId);
-        if (viewer) {
-          viewer.ws.send(JSON.stringify({
-            type: 'camera-disconnected',
-            cameraId: connectionId
-          }));
-        }
-      });
-      cameras.delete(connectionId);
-      broadcastCameraList();
-      console.log(`📹 Cámara desconectada: ${connectionId}`);
+    // Buscar cámara por connectionId en los valores
+    for (const [cameraId, camera] of cameras.entries()) {
+      if (camera.ws === ws) {
+        camera.viewers.forEach(viewerId => {
+          const viewer = viewers.get(viewerId);
+          if (viewer) {
+            viewer.ws.send(JSON.stringify({
+              type: 'camera-disconnected',
+              cameraId: cameraId
+            }));
+          }
+        });
+        cameras.delete(cameraId);
+        broadcastCameraList();
+        console.log(`📹 Cámara desconectada: ${cameraId}`);
+        break;
+      }
     }
     
     if (viewers.has(connectionId)) {
@@ -398,10 +513,11 @@ function sendCameraList(ws, session) {
   const cameraList = Array.from(cameras.entries()).map(([id, camera]) => ({
     id,
     name: camera.name,
-    viewers: camera.viewers.size
+    viewers: camera.viewers.size,
+    description: cameraConfigs.get(id)?.description || '',
+    location: cameraConfigs.get(id)?.location || ''
   }));
   
-  // Filtrar según permisos
   let filteredCameras = cameraList;
   if (session.role !== 'admin') {
     filteredCameras = cameraList.filter(cam => 
@@ -417,8 +533,12 @@ function sendCameraList(ws, session) {
 
 function broadcastCameraList() {
   viewers.forEach(viewer => {
-    const session = sessions.get(viewer.userId);
-    if (session) {
+    const user = users.get(viewer.userId);
+    if (user) {
+      const session = {
+        role: user.role,
+        allowedCameras: user.allowedCameras
+      };
       sendCameraList(viewer.ws, session);
     }
   });
@@ -429,7 +549,6 @@ setInterval(() => {
   const now = new Date();
   for (const [token, session] of sessions.entries()) {
     const sessionAge = now - new Date(session.createdAt);
-    // Eliminar sesiones mayores a 24 horas
     if (sessionAge > 24 * 60 * 60 * 1000) {
       sessions.delete(token);
     }
