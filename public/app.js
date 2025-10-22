@@ -453,6 +453,8 @@ async function startCamera() {
                     break;
                 case 'viewer-joined':
                     console.log('👁️ Viewer conectado:', data.viewerId);
+                    console.log('   Mi cameraId:', myId);
+                    console.log('   Peer connections activos:', Array.from(peerConnections.keys()));
                     await createPeerConnection(data.viewerId);
                     break;
                 case 'answer':
