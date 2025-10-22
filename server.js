@@ -450,14 +450,20 @@ wss.on('connection', (ws) => {
           const camera = cameras.get(data.cameraId);
           
           if (!viewer || !camera) {
+            console.log(`❌ Cámara o viewer no encontrado. Viewer: ${!!viewer}, Camera: ${!!camera}`);
             ws.send(JSON.stringify({ type: 'error', message: 'Cámara no disponible' }));
             return;
           }
 
+          // Verificar permisos
           if (viewer.role !== 'admin' && !viewer.allowedCameras.includes(data.cameraId)) {
+            console.log(`❌ Usuario ${viewer.userId} sin permiso para cámara ${data.cameraId}`);
+            console.log(`   Cámaras permitidas: ${viewer.allowedCameras.join(', ')}`);
             ws.send(JSON.stringify({ type: 'error', message: 'No tienes permiso para ver esta cámara' }));
             return;
           }
+
+          console.log(`✅ Usuario ${viewer.userId} conectándose a cámara ${camera.name}`);
 
           viewer.watchingCamera = data.cameraId;
           camera.viewers.add(connectionId);
@@ -538,10 +544,14 @@ function sendCameraList(ws, session) {
   
   let filteredCameras = cameraList;
   if (session.role !== 'admin') {
-    filteredCameras = cameraList.filter(cam => 
-      session.allowedCameras.includes(cam.id)
-    );
+    filteredCameras = cameraList.filter(cam => {
+      // Buscar el usuario actualizado con sus permisos
+      const user = users.get(session.username);
+      return user && user.allowedCameras.includes(cam.id);
+    });
   }
+  
+  console.log(`📋 Enviando ${filteredCameras.length} cámaras a ${session.username} (rol: ${session.role})`);
   
   ws.send(JSON.stringify({
     type: 'camera-list',
