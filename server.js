@@ -16,13 +16,14 @@ app.use(express.static('public'));
 const USERS = {
   // Cámaras - pueden transmitir
   cameras: {
-    'camera1': hashPassword('cam123'),
-    'camera2': hashPassword('cam456')
+    'Cam_1': hashPassword('cam1_123'),
+    'Cam_2': hashPassword('cam2_123')
   },
   // Viewers - solo pueden ver
   viewers: {
-    'viewer1': hashPassword('view123'),
-    'admin': hashPassword('admin123')
+    'User_1': hashPassword('user1_123'),
+    'User_2': hashPassword('user2_123'),
+    'Ad_min': hashPassword('administrator123')
   }
 };
 
