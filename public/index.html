@@ -2,7 +2,6 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     
     <!-- PWA Meta Tags -->
@@ -30,7 +29,6 @@
     
     <title>HouseCam App - Sistema de Vigilancia</title>
     
-
     <style>
         * {
             margin: 0;
@@ -43,14 +41,11 @@
             background: #0f172a;
             color: #e2e8f0;
             min-height: 100vh;
-            /* Soporte para notch en iOS */
             padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         }
 
-        /* Estilos para modo standalone */
         body.standalone-mode {
             padding-top: max(20px, env(safe-area-inset-top));
-
         }
 
         .container {
@@ -64,9 +59,6 @@
             margin-bottom: 30px;
             color: #38bdf8;
         }
-
-
-        /* Login Screen */
 
         .login-screen {
             display: flex;
@@ -106,10 +98,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-
             flex-wrap: wrap;
             gap: 10px;
-
         }
 
         .user-info span {
@@ -125,7 +115,6 @@
             gap: 20px;
             justify-content: center;
             margin-bottom: 30px;
-
             flex-wrap: wrap;
         }
 
@@ -148,6 +137,10 @@
         .mode-btn.active {
             background: #38bdf8;
             color: #0f172a;
+        }
+
+        .mode-btn.hidden {
+            display: none;
         }
 
         .section {
@@ -240,9 +233,7 @@
             border-radius: 8px;
             cursor: pointer;
             transition: background 0.3s;
-
             touch-action: manipulation;
-
         }
 
         .btn:hover {
@@ -273,13 +264,11 @@
             background: #475569;
         }
 
-
         .btn-small {
             padding: 8px 16px;
             font-size: 14px;
             width: auto;
         }
-
 
         video {
             width: 100%;
@@ -335,6 +324,8 @@
             padding: 15px;
             cursor: pointer;
             transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
         }
 
         .camera-card:hover {
@@ -349,6 +340,31 @@
 
         .camera-card p {
             color: #94a3b8;
+            font-size: 14px;
+        }
+
+        .camera-preview-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 8px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .camera-preview-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .camera-preview-loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #64748b;
             font-size: 14px;
         }
 
@@ -369,7 +385,6 @@
             border-radius: 5px;
             font-size: 14px;
         }
-
 
         .motion-controls {
             background: #1e293b;
@@ -459,6 +474,16 @@
             }
         }
 
+        .wake-lock-status {
+            margin-top: 10px;
+            padding: 8px;
+            background: #1e3a8a;
+            color: #93c5fd;
+            border-radius: 6px;
+            font-size: 14px;
+            text-align: center;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -485,31 +510,32 @@
             .camera-grid {
                 grid-template-columns: 1fr;
             }
-        }
 
+            .camera-preview-container {
+                height: 180px;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- Pantalla de Login -->
     <div id="login-screen" class="login-screen">
         <div class="login-box">
-
             <h2>🔐 HouseCam App</h2>
             <div class="input-group">
                 <label>Tipo de Usuario:</label>
                 <select id="login-role">
                     <option value="camera">🔹 Cámara</option>
-
                     <option value="viewer">👁️ Visualización</option>
                 </select>
             </div>
             <div class="input-group">
                 <label>Usuario:</label>
-                <input type="text" id="login-username" placeholder="Ingrese usuario">
+                <input type="text" id="login-username" placeholder="Ingrese usuario" autocomplete="username">
             </div>
             <div class="input-group">
                 <label>Contraseña:</label>
-                <input type="password" id="login-password" placeholder="Ingrese contraseña">
+                <input type="password" id="login-password" placeholder="Ingrese contraseña" autocomplete="current-password">
             </div>
             <button class="btn" onclick="login()">Iniciar Sesión</button>
             <div id="login-status" style="margin-top: 15px;"></div>
@@ -523,9 +549,7 @@
     <!-- Pantalla Principal -->
     <div id="app-screen" class="app-screen">
         <div class="container">
-
             <h1>🎥 HouseCam App</h1>
-
 
             <div class="user-info">
                 <div>
@@ -536,17 +560,13 @@
             </div>
 
             <div class="mode-selection">
-
-                <button class="mode-btn" onclick="selectMode('camera')">🔹 Modo Cámara</button>
-
+                <button class="mode-btn" id="camera-mode-btn" onclick="selectMode('camera')">🔹 Modo Cámara</button>
                 <button class="mode-btn" onclick="selectMode('viewer')">👁️ Modo Visualización</button>
             </div>
 
             <!-- Sección Cámara -->
             <div id="camera-section" class="section">
-
                 <h2>🔹 Configurar Cámara</h2>
-
                 <div class="input-group">
                     <label for="camera-name">Nombre de la Cámara:</label>
                     <input type="text" id="camera-name" placeholder="Ej: Entrada Principal" value="Cámara 1">
@@ -565,6 +585,12 @@
                     </label>
                 </div>
                 <div class="input-group">
+                    <label>
+                        <input type="checkbox" id="keep-awake" checked> 🔋 Mantener Pantalla Activa
+                    </label>
+                    <small style="color: #64748b; margin-top: 5px; display: block;">Evita que la transmisión se pause al bloquear la pantalla</small>
+                </div>
+                <div class="input-group">
                     <label for="brightness">☀️ Brillo: <span id="brightness-value">100</span>%</label>
                     <input type="range" id="brightness" min="50" max="200" value="100">
                 </div>
@@ -579,7 +605,8 @@
                 <button class="btn" id="start-camera-btn" onclick="startCamera()">Iniciar Cámara</button>
                 <button class="btn btn-danger hidden" id="stop-camera-btn" onclick="stopCamera()">Detener Cámara</button>
                 <div id="camera-status"></div>
-
+                
+                <div id="wake-lock-status" class="wake-lock-status hidden"></div>
 
                 <!-- Controles de detección de movimiento -->
                 <div id="motion-controls" class="motion-controls hidden">
@@ -594,7 +621,6 @@
                         🚨 MOVIMIENTO DETECTADO
                     </div>
                 </div>
-
 
                 <div class="video-container">
                     <video id="camera-preview" autoplay muted playsinline></video>
@@ -635,6 +661,5 @@
     <!-- Scripts -->
     <script src="/app.js"></script>
     <script src="/pwa-install.js"></script>
-
 </body>
 </html>

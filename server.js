@@ -1,9 +1,8 @@
-// Servidor de señalización WebRTC con autenticación
+// Servidor de señalización WebRTC con autenticación y sesión única
 const express = require('express');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,26 +10,13 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
-
-// ============ CONFIGURACIÓN DE AUTENTICACIÓN CON VARIABLES DE ENTORNO ============
-
-// Función para hashear contraseñas
+// ============ CONFIGURACIÓN AUTENTICACIÓN ============
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-
-// Cargar usuarios desde variables de entorno
 function loadUsersFromEnv() {
-  const users = {
-    cameras: {},
-    viewers: {}
-  };
-
-  // Formato de variables de entorno:
-  // CAMERA_1=username:password
-  // VIEWER_1=username:password
-  // etc.
+  const users = { cameras: {}, viewers: {} };
 
   // Cargar cámaras
   let cameraIndex = 1;
@@ -54,15 +40,11 @@ function loadUsersFromEnv() {
     viewerIndex++;
   }
 
-  // Si no hay usuarios en variables de entorno, usar valores por defecto (SOLO PARA DESARROLLO)
+  // Valores por defecto solo para desarrollo
   if (Object.keys(users.cameras).length === 0 && Object.keys(users.viewers).length === 0) {
-    console.warn('⚠️  ADVERTENCIA: Usando credenciales por defecto. Configura variables de entorno en producción.');
-    users.cameras = {
-      'camera_demo': hashPassword('demo123'),
-    };
-    users.viewers = {
-      'viewer_demo': hashPassword('demo123'),
-    };
+    console.warn('⚠️  ADVERTENCIA: Usando credenciales por defecto');
+    users.cameras = { 'camera_demo': hashPassword('demo123') };
+    users.viewers = { 'viewer_demo': hashPassword('demo123') };
   }
 
   return users;
@@ -71,14 +53,15 @@ function loadUsersFromEnv() {
 const USERS = loadUsersFromEnv();
 
 // Tokens de sesión activos
-const activeSessions = new Map(); // token -> {userId, role, expiresAt}
+const activeSessions = new Map(); // token -> {userId, role, expiresAt, connectionId}
 
-// Generar token de sesión
+// Rastrear conexiones activas por usuario
+const activeConnections = new Map(); // userId -> connectionId
+
 function generateToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
-// Verificar token
 function verifyToken(token) {
   const session = activeSessions.get(token);
   if (!session) return null;
@@ -91,7 +74,7 @@ function verifyToken(token) {
   return session;
 }
 
-// ============ ENDPOINTS DE AUTENTICACIÓN ============
+// ============ ENDPOINTS AUTENTICACIÓN ============
 app.post('/api/login', (req, res) => {
   const { username, password, role } = req.body;
   
@@ -110,6 +93,22 @@ app.post('/api/login', (req, res) => {
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
   
+  // Verificar si el usuario ya tiene una sesión activa
+  if (activeConnections.has(username)) {
+    const existingConnectionId = activeConnections.get(username);
+    const camera = cameras.get(existingConnectionId);
+    const viewer = viewers.get(existingConnectionId);
+    
+    if (camera || viewer) {
+      return res.status(403).json({ 
+        error: 'Ya hay una sesión activa para este usuario en otro dispositivo' 
+      });
+    } else {
+      // La conexión existe pero no está activa, limpiar
+      activeConnections.delete(username);
+    }
+  }
+  
   // Crear sesión
   const token = generateToken();
   const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 horas
@@ -117,7 +116,8 @@ app.post('/api/login', (req, res) => {
   activeSessions.set(token, {
     userId: username,
     role: role,
-    expiresAt: expiresAt
+    expiresAt: expiresAt,
+    connectionId: null
   });
   
   res.json({
@@ -131,7 +131,11 @@ app.post('/api/login', (req, res) => {
 app.post('/api/logout', (req, res) => {
   const { token } = req.body;
   if (token) {
-    activeSessions.delete(token);
+    const session = activeSessions.get(token);
+    if (session) {
+      activeConnections.delete(session.userId);
+      activeSessions.delete(token);
+    }
   }
   res.json({ success: true });
 });
@@ -142,13 +146,14 @@ app.get('/ping', (req, res) => {
     timestamp: new Date().toISOString(),
     cameras: cameras.size,
     viewers: viewers.size,
-    sessions: activeSessions.size
+    sessions: activeSessions.size,
+    activeUsers: activeConnections.size
   });
 });
 
 // ============ SERVIDOR WEBSOCKET ============
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`🚀 Servidor en puerto ${PORT}`);
   console.log(`📊 Usuarios cargados:`);
   console.log(`   - Cámaras: ${Object.keys(USERS.cameras).length}`);
   console.log(`   - Viewers: ${Object.keys(USERS.viewers).length}`);
@@ -160,7 +165,6 @@ const server = app.listen(PORT, () => {
     console.log('  Viewer: viewer_demo / demo123');
     console.log('=======================\n');
   }
-
 });
 
 const wss = new WebSocket.Server({ server });
@@ -213,8 +217,23 @@ wss.on('connection', (ws) => {
             return;
           }
           
+          // Verificar si el usuario ya está conectado
+          if (activeConnections.has(session.userId)) {
+            const existingId = activeConnections.get(session.userId);
+            if (existingId !== connectionId && (cameras.has(existingId) || viewers.has(existingId))) {
+              ws.send(JSON.stringify({
+                type: 'session-taken',
+                message: 'Usuario ya conectado en otro dispositivo'
+              }));
+              ws.close();
+              return;
+            }
+          }
+          
           authenticated = true;
           userSession = session;
+          session.connectionId = connectionId;
+          activeConnections.set(session.userId, connectionId);
           
           ws.send(JSON.stringify({
             type: 'authenticated',
@@ -238,7 +257,8 @@ wss.on('connection', (ws) => {
             ws,
             name: data.name || `Cámara ${cameras.size + 1}`,
             userId: userSession.userId,
-            viewers: new Set()
+            viewers: new Set(),
+            previewViewers: new Set()
           });
           
           ws.send(JSON.stringify({
@@ -276,6 +296,21 @@ wss.on('connection', (ws) => {
           console.log(`Viewer registrado: ${userSession.userId}`);
           break;
 
+        case 'request-preview':
+          const previewCamera = cameras.get(data.cameraId);
+          if (previewCamera) {
+            const viewer = viewers.get(connectionId);
+            if (viewer) {
+              previewCamera.previewViewers.add(connectionId);
+              
+              previewCamera.ws.send(JSON.stringify({
+                type: 'preview-request',
+                viewerId: connectionId
+              }));
+            }
+          }
+          break;
+
         case 'request-camera':
           const camera = cameras.get(data.cameraId);
           if (camera) {
@@ -292,7 +327,6 @@ wss.on('connection', (ws) => {
           }
           break;
 
-
         case 'motion-detected':
           if (userSession.role !== 'camera') {
             return;
@@ -300,9 +334,9 @@ wss.on('connection', (ws) => {
           
           const motionCamera = cameras.get(connectionId);
           if (motionCamera) {
-            console.log(`🚨 Movimiento detectado en: ${motionCamera.name}`);
+            console.log(`🚨 Movimiento en: ${motionCamera.name}`);
             
-            // Enviar notificación a todos los viewers conectados
+            // Enviar a todos los viewers
             viewers.forEach(viewer => {
               viewer.ws.send(JSON.stringify({
                 type: 'motion-alert',
@@ -311,22 +345,8 @@ wss.on('connection', (ws) => {
                 timestamp: new Date().toISOString()
               }));
             });
-            
-            // También enviar a viewers que estén viendo esta cámara
-            motionCamera.viewers.forEach(viewerId => {
-              const viewer = viewers.get(viewerId);
-              if (viewer) {
-                viewer.ws.send(JSON.stringify({
-                  type: 'motion-alert',
-                  cameraId: connectionId,
-                  cameraName: motionCamera.name,
-                  timestamp: new Date().toISOString()
-                }));
-              }
-            });
           }
           break;
-
 
         case 'offer':
         case 'answer':
@@ -362,6 +382,8 @@ wss.on('connection', (ws) => {
     
     if (cameras.has(connectionId)) {
       const camera = cameras.get(connectionId);
+      
+      // Notificar a viewers
       camera.viewers.forEach(viewerId => {
         const viewer = viewers.get(viewerId);
         if (viewer) {
@@ -371,6 +393,11 @@ wss.on('connection', (ws) => {
           }));
         }
       });
+      
+      if (userSession) {
+        activeConnections.delete(userSession.userId);
+      }
+      
       cameras.delete(connectionId);
       broadcastCameraList();
       console.log(`Cámara desconectada: ${connectionId}`);
@@ -378,12 +405,19 @@ wss.on('connection', (ws) => {
     
     if (viewers.has(connectionId)) {
       const viewer = viewers.get(connectionId);
+      
       if (viewer.watchingCamera) {
         const camera = cameras.get(viewer.watchingCamera);
         if (camera) {
           camera.viewers.delete(connectionId);
+          camera.previewViewers.delete(connectionId);
         }
       }
+      
+      if (userSession) {
+        activeConnections.delete(userSession.userId);
+      }
+      
       viewers.delete(connectionId);
       console.log(`Viewer desconectado: ${connectionId}`);
     }
@@ -425,9 +459,10 @@ setInterval(() => {
   const now = Date.now();
   for (const [token, session] of activeSessions.entries()) {
     if (now > session.expiresAt) {
+      if (session.userId) {
+        activeConnections.delete(session.userId);
+      }
       activeSessions.delete(token);
     }
   }
-
 }, 60 * 60 * 1000);
-
