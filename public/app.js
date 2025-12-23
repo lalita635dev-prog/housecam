@@ -4,6 +4,7 @@ let localStream = null;
 let peerConnections = new Map();
 let myId = null;
 let authToken = null;
+
 let currentUser = null;
 
 // Variables para detección de movimiento
@@ -17,6 +18,7 @@ const MOTION_THRESHOLD = 30;
 const MOTION_PIXEL_THRESHOLD = 0.02;
 const ALERT_COOLDOWN = 5000;
 
+
 const iceServers = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -25,12 +27,14 @@ const iceServers = {
 };
 
 // ==================== INICIALIZACIÓN ====================
+
 window.addEventListener('DOMContentLoaded', () => {
     setupCameraControls();
     
     document.getElementById('login-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') login();
     });
+
 });
 
 window.addEventListener('beforeunload', () => {
@@ -41,10 +45,12 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ==================== LOGIN ====================
+
 async function login() {
     const username = document.getElementById('login-username').value.trim();
     const password = document.getElementById('login-password').value;
     const role = document.getElementById('login-role').value;
+
 
     if (!username || !password) {
         showStatus('login-status', 'Por favor completa todos los campos', 'error');
@@ -52,15 +58,18 @@ async function login() {
     }
 
     try {
+
         showStatus('login-status', 'Autenticando...', 'info');
 
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, role })
+
         });
 
         const data = await response.json();
+
 
         if (response.ok && data.token) {
             authToken = data.token;
@@ -77,9 +86,11 @@ async function login() {
         }
     } catch (error) {
         console.error('Error en login:', error);
+
         showStatus('login-status', 'Error de conexión con el servidor', 'error');
     }
 }
+
 
 function showCameraInterface() {
     document.getElementById('login-screen').style.display = 'none';
@@ -110,9 +121,11 @@ async function logout() {
     }
 
     if (ws) ws.close();
+
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
     }
+
     peerConnections.forEach(pc => pc.close());
     peerConnections.clear();
 
@@ -140,6 +153,7 @@ function selectMode(mode) {
         buttons[1].classList.add('active');
         document.getElementById('viewer-section').classList.add('active');
         document.getElementById('camera-section').classList.remove('active');
+
     }
 }
 
@@ -196,6 +210,7 @@ function applyVideoZoom() {
     video.style.transform = `scale(${zoom})`;
     video.style.transformOrigin = 'center center';
 }
+
 
 // ==================== DETECCIÓN DE MOVIMIENTO ====================
 function initMotionDetection() {
@@ -357,6 +372,7 @@ function handleMotionAlert(data) {
 // ==================== CÁMARA ====================
 async function startCamera() {
     const cameraName = document.getElementById('camera-name').value.trim();
+
     const quality = document.getElementById('video-quality').value;
 
     try {
@@ -407,8 +423,10 @@ async function startCamera() {
 
         ws.onopen = () => {
             ws.send(JSON.stringify({
+
                 type: 'authenticate',
                 token: authToken
+
             }));
         };
 
@@ -416,6 +434,7 @@ async function startCamera() {
             const data = JSON.parse(event.data);
             
             switch(data.type) {
+
                 case 'authenticated':
                     ws.send(JSON.stringify({
                         type: 'register-camera',
@@ -425,10 +444,12 @@ async function startCamera() {
 
                 case 'registered':
                     myId = data.id;
+
                     console.log('✅ Cámara registrada con ID:', myId);
                     showStatus('camera-status', '✅ Transmitiendo', 'success');
                     document.getElementById('camera-info').classList.remove('hidden');
                     document.getElementById('camera-info').textContent = `📡 ${cameraName}`;
+
                     document.getElementById('start-camera-btn').classList.add('hidden');
                     document.getElementById('stop-camera-btn').classList.remove('hidden');
                     document.getElementById('motion-controls').classList.remove('hidden');
@@ -439,13 +460,16 @@ async function startCamera() {
                     await createPeerConnection(data.viewerId);
                     break;
 
+
                 case 'answer':
                     const pc = peerConnections.get(data.from);
                     if (pc) {
                         console.log('📥 Respuesta recibida de viewer:', data.from);
                         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+
                     }
                     break;
+
 
                 case 'ice-candidate':
                     const peerConn = peerConnections.get(data.from);
@@ -455,6 +479,7 @@ async function startCamera() {
                     }
                     break;
 
+
                 case 'auth-failed':
                     showStatus('camera-status', '❌ Sesión expirada - Inicie sesión nuevamente', 'error');
                     setTimeout(logout, 2000);
@@ -462,6 +487,7 @@ async function startCamera() {
 
                 case 'error':
                     showStatus('camera-status', `❌ ${data.message}`, 'error');
+
                     break;
             }
         };
@@ -518,7 +544,9 @@ async function createPeerConnection(viewerId) {
                 type: 'ice-candidate',
                 candidate: event.candidate,
                 target: viewerId,
+
                 from: myId
+
             }));
         }
     };
@@ -539,7 +567,9 @@ async function createPeerConnection(viewerId) {
         type: 'offer',
         offer: offer,
         target: viewerId,
+
         from: myId
+
     }));
 
     document.getElementById('camera-info').textContent = `📡 ${peerConnections.size} espectador(es)`;
@@ -555,6 +585,7 @@ function stopCamera() {
     peerConnections.forEach(pc => pc.close());
     peerConnections.clear();
     
+
     if (motionDetectionInterval) {
         clearInterval(motionDetectionInterval);
         motionDetectionInterval = null;
@@ -563,10 +594,12 @@ function stopCamera() {
     previousFrame = null;
     document.getElementById('motion-controls').classList.add('hidden');
     
+
     document.getElementById('camera-preview').srcObject = null;
     document.getElementById('camera-info').classList.add('hidden');
     document.getElementById('start-camera-btn').classList.remove('hidden');
     document.getElementById('stop-camera-btn').classList.add('hidden');
+
     showStatus('camera-status', '', 'info');
 }
 
@@ -584,15 +617,18 @@ function connectViewer() {
 
     ws.onopen = () => {
         ws.send(JSON.stringify({
+
             type: 'authenticate',
             token: authToken
         }));
+
     };
 
     ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
         
         switch(data.type) {
+
             case 'authenticated':
                 ws.send(JSON.stringify({
                     type: 'register-viewer'
@@ -615,6 +651,7 @@ function connectViewer() {
                 await handleOffer(data.offer, data.from);
                 break;
 
+
             case 'ice-candidate':
                 const pc = peerConnections.get(data.from);
                 if (pc && data.candidate) {
@@ -627,6 +664,7 @@ function connectViewer() {
                 backToCameraList();
                 break;
 
+
             case 'motion-alert':
                 handleMotionAlert(data);
                 break;
@@ -635,6 +673,7 @@ function connectViewer() {
                 showStatus('viewer-status', '❌ Sesión expirada - Inicie sesión nuevamente', 'error');
                 setTimeout(logout, 2000);
                 break;
+
 
             case 'error':
                 showStatus('viewer-status', `❌ ${data.message}`, 'error');
@@ -649,18 +688,23 @@ function connectViewer() {
 
 function displayCameras(cameras) {
     const listEl = document.getElementById('cameras-list');
+
     listEl.classList.remove('hidden');
+
     
     console.log('📹 Mostrando cámaras:', cameras);
     
     if (cameras.length === 0) {
+
         listEl.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay cámaras disponibles</p>';
+
         return;
     }
 
     listEl.innerHTML = cameras.map(cam => `
         <div class="camera-card" onclick="watchCamera('${cam.id}', '${cam.name}')">
             <h3>📹 ${cam.name}</h3>
+
             <p>👁️ ${cam.viewers} espectador(es)</p>
             <p style="margin-top: 5px; color: #6ee7b7;">🟢 En línea</p>
         </div>
@@ -670,7 +714,9 @@ function displayCameras(cameras) {
 function watchCamera(cameraId, cameraName) {
     console.log('🎥 Solicitando ver cámara:', cameraId, cameraName);
     
+
     document.getElementById('cameras-list').classList.add('hidden');
+
     document.getElementById('viewer-video-container').classList.remove('hidden');
     document.getElementById('viewer-info').textContent = `📹 ${cameraName}`;
 
@@ -704,6 +750,7 @@ async function handleOffer(offer, cameraId) {
                 type: 'ice-candidate',
                 candidate: event.candidate,
                 target: cameraId,
+
                 from: myId
             }));
         }
@@ -726,7 +773,9 @@ async function handleOffer(offer, cameraId) {
         type: 'answer',
         answer: answer,
         target: cameraId,
+
         from: myId
+
     }));
 }
 
@@ -735,6 +784,7 @@ function backToCameraList() {
     peerConnections.clear();
     document.getElementById('viewer-video').srcObject = null;
     document.getElementById('viewer-video-container').classList.add('hidden');
+
     document.getElementById('cameras-list').classList.remove('hidden');
 }
 
@@ -749,13 +799,16 @@ function disconnectViewer() {
     document.getElementById('cameras-list').classList.add('hidden');
     document.getElementById('viewer-video-container').classList.add('hidden');
     showStatus('viewer-status', '', 'info');
+
 }
 
 // ==================== UTILIDADES ====================
 function showStatus(elementId, message, type) {
     const statusEl = document.getElementById(elementId);
+
     if (!statusEl) return;
     
+
     statusEl.className = `status ${type}`;
     statusEl.textContent = message;
     if (!message) statusEl.style.display = 'none';

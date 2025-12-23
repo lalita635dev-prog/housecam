@@ -11,11 +11,14 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static('public'));
 
+
 // ============ CONFIGURACIÓN DE AUTENTICACIÓN CON VARIABLES DE ENTORNO ============
+
 // Función para hashear contraseñas
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
+
 
 // Cargar usuarios desde variables de entorno
 function loadUsersFromEnv() {
@@ -157,6 +160,7 @@ const server = app.listen(PORT, () => {
     console.log('  Viewer: viewer_demo / demo123');
     console.log('=======================\n');
   }
+
 });
 
 const wss = new WebSocket.Server({ server });
@@ -288,6 +292,7 @@ wss.on('connection', (ws) => {
           }
           break;
 
+
         case 'motion-detected':
           if (userSession.role !== 'camera') {
             return;
@@ -321,6 +326,7 @@ wss.on('connection', (ws) => {
             });
           }
           break;
+
 
         case 'offer':
         case 'answer':
@@ -422,4 +428,6 @@ setInterval(() => {
       activeSessions.delete(token);
     }
   }
+
 }, 60 * 60 * 1000);
+

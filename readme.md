@@ -1,4 +1,5 @@
-# 🎥 Sistema de Vigilancia con WebRTC - V4
+
+# 🎥 Sistema de Vigilancia con WebRTC - V5
 
 Sistema de vigilancia en tiempo real con autenticación y **detección de movimiento**, usando WebRTC para streaming de video peer-to-peer.
 
@@ -8,6 +9,7 @@ Sistema de vigilancia en tiempo real con autenticación y **detección de movimi
 ✅ **Notificaciones instantáneas** - Alertas push del navegador  
 ✅ **Lista de alertas en vivo** - Historial de movimientos detectados  
 ✅ **Configurable** - Ajusta sensibilidad y tiempo entre alertas  
+
 
 ## 🔐 Características de Seguridad
 
@@ -20,13 +22,26 @@ Sistema de vigilancia en tiempo real con autenticación y **detección de movimi
 ## 📝 Estructura del Proyecto
 
 ```
-sistema-vigilancia/
-├── server.js           # Servidor con autenticación y WebSocket
-├── package.json        # Dependencias
-├── README.md          # Este archivo
+HouseCam/
+├── server.js
+├── package.json
+├── README.md
 └── public/
-    ├── index.html     # Frontend con login y controles
-    └── app.js         # Lógica del cliente y detección de movimiento
+    ├── index.html
+    ├── app.js
+    ├── manifest.json
+    ├── service-worker.js
+    ├── pwa-install.js
+    ├── offline.html
+    └── icons/
+        ├── icon-72x72.png
+        ├── icon-96x96.png
+        ├── icon-128x128.png
+        ├── icon-144x144.png
+        ├── icon-152x152.png
+        ├── icon-192x192.png
+        ├── icon-384x384.png
+        └── icon-512x512.png
 ```
 
 ## 🛠️ Tecnologías
@@ -53,3 +68,4 @@ Para problemas o preguntas, contacta al desarrollador.
 MIT License - Úsalo libremente para tus proyectos.
 
 ---
+
