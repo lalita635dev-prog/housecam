@@ -8,6 +8,9 @@ let authToken = null;
 let currentUser = null;
 let wakeLock = null;
 let keepAliveInterval = null;
+// NUEVAS VARIABLES PARA WAKE LOCK MEJORADO
+let keepAliveAudio = null;
+let screenLockWorkaround = null;
 
 // Variables para detección de movimiento
 let motionDetectionEnabled = false;
@@ -32,17 +35,17 @@ window.addEventListener('DOMContentLoaded', () => {
     setupCameraControls();
     checkWakeLockSupport();
     requestNotificationPermissionOnLoad();
-    
+
     document.getElementById('login-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') login();
     });
-    
+
     const toggleBtn = document.getElementById('toggle-advanced');
     const advancedConfig = document.getElementById('advanced-config');
     if (toggleBtn && advancedConfig) {
         toggleBtn.addEventListener('click', () => {
             advancedConfig.classList.toggle('hidden');
-            toggleBtn.textContent = advancedConfig.classList.contains('hidden') ? 
+            toggleBtn.textContent = advancedConfig.classList.contains('hidden') ?
                 '⚙️ Mostrar Configuración Avanzada' : '⚙️ Ocultar Configuración';
         });
     }
@@ -57,18 +60,39 @@ window.addEventListener('beforeunload', () => {
     if (keepAliveInterval) clearInterval(keepAliveInterval);
 });
 
+// NUEVO EVENT LISTENER MEJORADO PARA VISIBILIDAD
 document.addEventListener('visibilitychange', async () => {
+    const video = document.getElementById('camera-preview');
+    const keepAwakeCheckbox = document.getElementById('keep-awake');
+
     if (document.hidden) {
-        console.log('📱 Página oculta');
+        console.log('📱 Página oculta - manteniendo transmisión activa');
+
+        // Asegurar que el audio siga sonando
+        if (keepAliveAudio && keepAliveAudio.audioContext.state === 'suspended') {
+            keepAliveAudio.audioContext.resume();
+        }
+
+        // Asegurar que el video siga activo
+        if (video && video.srcObject && !video.paused) {
+            console.log('✅ Video activo en segundo plano');
+        }
     } else {
         console.log('📱 Página visible');
-        if (localStream && document.getElementById('keep-awake')?.checked) {
+
+        // Reactivar video si está pausado
+        if (video && video.srcObject && video.paused) {
+            video.play().catch(e => console.log('Reactivando video:', e));
+        }
+
+        // Reactivar wake lock si estaba activo
+        if (localStream && keepAwakeCheckbox?.checked) {
             await requestWakeLock();
         }
     }
 });
 
-// ==================== WAKE LOCK MEJORADO ====================
+// ==================== WAKE LOCK MEJORADO PARA MÓVILES ====================
 function checkWakeLockSupport() {
     if ('wakeLock' in navigator) {
         console.log('✅ Wake Lock API disponible');
@@ -80,67 +104,144 @@ function checkWakeLockSupport() {
 }
 
 async function requestWakeLock() {
-    if (!('wakeLock' in navigator)) {
-        showWakeLockStatus('⚠️ Wake Lock no disponible', 'warning');
-        startKeepAlive();
-        return false;
-    }
-
     const keepAwakeCheckbox = document.getElementById('keep-awake');
     if (!keepAwakeCheckbox?.checked) {
         showWakeLockStatus('ℹ️ Mantener pantalla activa está desactivado', 'info');
+        stopScreenLockWorkaround();
         return false;
     }
 
-    try {
-        wakeLock = await navigator.wakeLock.request('screen');
-        console.log('🔒 Wake Lock activado');
-        showWakeLockStatus('🔋 Pantalla permanecerá activa', 'success');
+    // Intentar Wake Lock API primero
+    if ('wakeLock' in navigator) {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('🔒 Wake Lock activado');
+            showWakeLockStatus('🔋 Pantalla permanecerá activa', 'success');
 
-        wakeLock.addEventListener('release', async () => {
-            console.log('🔓 Wake Lock liberado');
-            showWakeLockStatus('⚠️ Wake Lock liberado, reactivando...', 'warning');
-            if (localStream && keepAwakeCheckbox?.checked) {
-                setTimeout(() => requestWakeLock(), 1000);
-            }
-        });
-
-        startKeepAlive();
-        return true;
-    } catch (err) {
-        console.error('❌ Error al activar Wake Lock:', err);
-        showWakeLockStatus(`⚠️ Usando modo alternativo`, 'warning');
-        startKeepAlive();
-        return false;
+            wakeLock.addEventListener('release', async () => {
+                console.log('🔓 Wake Lock liberado, reactivando...');
+                if (localStream && keepAwakeCheckbox?.checked) {
+                    setTimeout(() => requestWakeLock(), 1000);
+                }
+            });
+        } catch (err) {
+            console.error('❌ Error Wake Lock:', err);
+        }
     }
+
+    // Activar workarounds para móviles (funciona con o sin Wake Lock)
+    startScreenLockWorkaround();
+    showWakeLockStatus('🔋 Sistema anti-suspensión activo', 'success');
+    return true;
 }
 
-function startKeepAlive() {
+function startScreenLockWorkaround() {
+    console.log('🔧 Iniciando workarounds para móviles...');
+
+    // 1. Crear audio silencioso en loop (más efectivo que ping)
+    createKeepAliveAudio();
+
+    // 2. Ping periódico al servidor
     if (keepAliveInterval) clearInterval(keepAliveInterval);
-    
     keepAliveInterval = setInterval(() => {
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({ type: 'ping' }));
         }
-        playKeepAliveSound();
-    }, 25000);
+    }, 20000); // Cada 20 segundos
+
+    // 3. Forzar que el video se mantenga reproduciendo
+    const video = document.getElementById('camera-preview');
+    if (video && video.srcObject) {
+        video.play().catch(e => console.log('Video play:', e));
+
+        // Vigilar que el video siga activo
+        if (screenLockWorkaround) clearInterval(screenLockWorkaround);
+        screenLockWorkaround = setInterval(() => {
+            if (video.paused && video.srcObject) {
+                console.log('🔄 Reactivando video...');
+                video.play().catch(e => { });
+            }
+        }, 5000);
+    }
 }
 
-function playKeepAliveSound() {
+function createKeepAliveAudio() {
     try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
+        // Si ya existe, no crear otro
+        if (keepAliveAudio) return;
+
+        // Crear AudioContext
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioContext = new AudioContext();
+
+        // Crear un buffer de audio silencioso de 1 segundo
+        const sampleRate = audioContext.sampleRate;
+        const buffer = audioContext.createBuffer(1, sampleRate * 1, sampleRate);
+        const channelData = buffer.getChannelData(0);
+
+        // Llenar con silencio (valores muy bajos)
+        for (let i = 0; i < buffer.length; i++) {
+            channelData[i] = Math.random() * 0.0001 - 0.00005;
+        }
+
+        // Crear source y loop
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        // Crear gain para controlar volumen (casi inaudible)
         const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
         gainNode.gain.value = 0.001;
-        oscillator.frequency.value = 20000;
-        
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.01);
-    } catch (e) {}
+
+        // Conectar
+        source.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        // Iniciar
+        source.start(0);
+
+        keepAliveAudio = { audioContext, source, gainNode };
+        console.log('🔊 Audio keep-alive iniciado');
+
+        // Reanudar el contexto si se suspende
+        setInterval(() => {
+            if (audioContext.state === 'suspended') {
+                console.log('🔄 Reanudando audio context...');
+                audioContext.resume();
+            }
+        }, 10000);
+
+    } catch (e) {
+        console.error('Error creando keep-alive audio:', e);
+    }
+}
+
+function stopScreenLockWorkaround() {
+    console.log('🛑 Deteniendo workarounds...');
+
+    // Detener audio
+    if (keepAliveAudio) {
+        try {
+            keepAliveAudio.source.stop();
+            keepAliveAudio.audioContext.close();
+            keepAliveAudio = null;
+            console.log('🔇 Audio keep-alive detenido');
+        } catch (e) {
+            console.error('Error deteniendo audio:', e);
+        }
+    }
+
+    // Detener pings
+    if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
+    }
+
+    // Detener vigilancia de video
+    if (screenLockWorkaround) {
+        clearInterval(screenLockWorkaround);
+        screenLockWorkaround = null;
+    }
 }
 
 function releaseWakeLock() {
@@ -153,19 +254,17 @@ function releaseWakeLock() {
             })
             .catch(err => console.error('Error:', err));
     }
-    if (keepAliveInterval) {
-        clearInterval(keepAliveInterval);
-        keepAliveInterval = null;
-    }
+
+    stopScreenLockWorkaround();
 }
 
 function showWakeLockStatus(message, type) {
     const statusEl = document.getElementById('wake-lock-status');
     if (!statusEl) return;
-    
+
     statusEl.textContent = message;
     statusEl.classList.remove('hidden');
-    
+
     if (type === 'success') {
         statusEl.style.background = '#064e3b';
         statusEl.style.color = '#6ee7b7';
@@ -211,7 +310,7 @@ async function login() {
             authToken = data.token;
             currentUser = { username: data.userId, role: data.role };
             localStorage.setItem('authToken', authToken);
-            
+
             if (data.role === 'camera') {
                 showCameraInterface();
             } else {
@@ -283,7 +382,7 @@ async function logout() {
 function selectMode(mode) {
     const buttons = document.querySelectorAll('.mode-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
-    
+
     if (mode === 'camera') {
         document.getElementById('camera-mode-btn')?.classList.add('active');
         document.getElementById('camera-section').classList.add('active');
@@ -336,7 +435,7 @@ function applyVideoFilters() {
     const brightness = document.getElementById('brightness').value;
     const contrast = document.getElementById('contrast').value;
     const nightMode = document.getElementById('night-mode')?.checked;
-    
+
     if (!nightMode) {
         video.style.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
     }
@@ -357,7 +456,7 @@ function initMotionDetection() {
 
 function detectMotion() {
     const video = document.getElementById('camera-preview');
-    
+
     if (!video.videoWidth || !video.videoHeight) return;
 
     if (motionCanvas.width !== video.videoWidth || motionCanvas.height !== video.videoHeight) {
@@ -378,8 +477,8 @@ function detectMotion() {
 
     for (let i = 0; i < currentFrame.data.length; i += 4) {
         const diff = Math.abs(currentFrame.data[i] - previousFrame.data[i]) +
-                     Math.abs(currentFrame.data[i + 1] - previousFrame.data[i + 1]) +
-                     Math.abs(currentFrame.data[i + 2] - previousFrame.data[i + 2]);
+            Math.abs(currentFrame.data[i + 1] - previousFrame.data[i + 1]) +
+            Math.abs(currentFrame.data[i + 2] - previousFrame.data[i + 2]);
 
         if (diff > MOTION_THRESHOLD) {
             motionPixels++;
@@ -419,7 +518,7 @@ function toggleMotionDetection() {
     motionDetectionEnabled = !motionDetectionEnabled;
     const btn = document.getElementById('motion-detection-toggle');
     const status = document.getElementById('motion-status');
-    
+
     if (motionDetectionEnabled) {
         initMotionDetection();
         motionDetectionInterval = setInterval(detectMotion, 500);
@@ -428,7 +527,7 @@ function toggleMotionDetection() {
         status.textContent = '🟢 Activa';
         status.style.color = '#6ee7b7';
         showStatus('camera-status', '✅ Detección activada', 'success');
-        
+
         if (Notification.permission === 'default') {
             Notification.requestPermission();
         }
@@ -499,7 +598,7 @@ function testNotification() {
 
 function handleMotionAlert(data) {
     console.log('🚨 Alerta:', data.cameraName);
-    
+
     if ('Notification' in window && Notification.permission === 'granted') {
         try {
             const n = new Notification('🚨 Movimiento Detectado', {
@@ -522,7 +621,7 @@ function handleMotionAlert(data) {
     } else {
         sendNotificationToServiceWorker(data);
     }
-    
+
     const alertsContainer = document.getElementById('motion-alerts-list');
     if (alertsContainer) {
         const noAlertsMsg = alertsContainer.querySelector('p');
@@ -538,11 +637,11 @@ function handleMotionAlert(data) {
             </div>
         `;
         alertsContainer.insertBefore(alertEl, alertsContainer.firstChild);
-        
+
         while (alertsContainer.children.length > 10) {
             alertsContainer.removeChild(alertsContainer.lastChild);
         }
-        
+
         setTimeout(() => {
             if (alertEl.parentNode) alertEl.remove();
             if (alertsContainer.children.length === 0) {
@@ -550,10 +649,10 @@ function handleMotionAlert(data) {
             }
         }, 30000);
     }
-    
+
     showStatus('viewer-status', `🚨 Movimiento en ${data.cameraName}`, 'error');
     setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
-    
+
     if ('vibrate' in navigator) {
         navigator.vibrate([200, 100, 200, 100, 200]);
     }
@@ -584,23 +683,38 @@ async function startCamera() {
         showStatus('camera-status', 'Solicitando cámara...', 'info');
 
         let videoConfig = {};
-        switch(quality) {
+        switch (quality) {
             case 'high':
-                videoConfig = { facingMode: 'environment', width: {ideal: 1920}, height: {ideal: 1080}, frameRate: {ideal: 30} };
+                videoConfig = { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } };
                 break;
             case 'low':
-                videoConfig = { facingMode: 'environment', width: {ideal: 854}, height: {ideal: 480}, frameRate: {ideal: 20} };
+                videoConfig = { facingMode: 'environment', width: { ideal: 854 }, height: { ideal: 480 }, frameRate: { ideal: 20 } };
                 break;
             default:
-                videoConfig = { facingMode: 'environment', width: {ideal: 1280}, height: {ideal: 720}, frameRate: {ideal: 25} };
+                videoConfig = { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 25 } };
         }
 
         localStream = await navigator.mediaDevices.getUserMedia({ video: videoConfig, audio: false });
-        document.getElementById('camera-preview').srcObject = localStream;
+        const video = document.getElementById('camera-preview');
+        video.srcObject = localStream;
+
+        // CONFIGURACIÓN MEJORADA DEL VIDEO PARA NO PAUSARSE
+        video.playsInline = true;
+        video.muted = true;
+        video.setAttribute('playsinline', 'true');
+        video.setAttribute('webkit-playsinline', 'true');
+
+        // Forzar reproducción continua
+        video.addEventListener('pause', () => {
+            if (video.srcObject && document.getElementById('keep-awake')?.checked) {
+                console.log('⚠️ Video pausado, reactivando...');
+                video.play().catch(e => { });
+            }
+        });
+
         applyVideoFilters();
         applyVideoZoom();
         await requestWakeLock();
-
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${protocol}//${window.location.host}`);
 
@@ -610,8 +724,8 @@ async function startCamera() {
 
         ws.onmessage = async (event) => {
             const data = JSON.parse(event.data);
-            
-            switch(data.type) {
+
+            switch (data.type) {
                 case 'authenticated':
                     ws.send(JSON.stringify({ type: 'register-camera', name: cameraName }));
                     break;
@@ -689,9 +803,9 @@ async function startCamera() {
 
 async function createPeerConnection(viewerId, isPreview) {
     console.log(`🔗 Creando ${isPreview ? 'preview' : 'conexión'} para:`, viewerId);
-    
+
     const pc = new RTCPeerConnection(iceServers);
-    
+
     if (isPreview) {
         previewPeerConnections.set(viewerId, pc);
     } else {
@@ -709,7 +823,7 @@ async function createPeerConnection(viewerId, isPreview) {
 
     localStream.getTracks().forEach(track => {
         const sender = pc.addTrack(track, localStream);
-        
+
         if (track.kind === 'video') {
             const params = sender.getParameters();
             if (!params.encodings) params.encodings = [{}];
@@ -768,7 +882,7 @@ function stopCamera() {
     previewPeerConnections.forEach(pc => pc.close());
     previewPeerConnections.clear();
     releaseWakeLock();
-    
+
     if (motionDetectionInterval) {
         clearInterval(motionDetectionInterval);
         motionDetectionInterval = null;
@@ -776,7 +890,7 @@ function stopCamera() {
     motionDetectionEnabled = false;
     previousFrame = null;
     document.getElementById('motion-controls').classList.add('hidden');
-    
+
     document.getElementById('camera-preview').srcObject = null;
     document.getElementById('camera-info').classList.add('hidden');
     document.getElementById('start-camera-btn').classList.remove('hidden');
@@ -800,8 +914,8 @@ function connectViewer() {
 
     ws.onmessage = async (event) => {
         const data = JSON.parse(event.data);
-        
-        switch(data.type) {
+
+        switch (data.type) {
             case 'authenticated':
                 ws.send(JSON.stringify({ type: 'register-viewer' }));
                 showStatus('viewer-status', '✅ Conectado', 'success');
@@ -863,9 +977,9 @@ function connectViewer() {
 function displayCamerasWithPreviews(cameras) {
     const listEl = document.getElementById('cameras-list');
     listEl.classList.remove('hidden');
-    
+
     console.log('📹 Cámaras disponibles:', cameras);
-    
+
     if (cameras.length === 0) {
         listEl.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay cámaras disponibles</p>';
         return;
@@ -888,7 +1002,7 @@ function displayCamerasWithPreviews(cameras) {
 
 function requestCameraPreview(cameraId) {
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    
+
     ws.send(JSON.stringify({
         type: 'request-preview',
         cameraId: cameraId
@@ -897,7 +1011,7 @@ function requestCameraPreview(cameraId) {
 
 function watchCamera(cameraId, cameraName) {
     console.log('🎥 Ver cámara:', cameraId, cameraName);
-    
+
     document.getElementById('cameras-list').classList.add('hidden');
     document.getElementById('viewer-video-container').classList.remove('hidden');
     document.getElementById('viewer-info').textContent = `📹 ${cameraName}`;
@@ -910,9 +1024,9 @@ function watchCamera(cameraId, cameraName) {
 
 async function handleOffer(offer, cameraId, isPreview) {
     console.log(`📥 Oferta de cámara ${isPreview ? '(preview)' : ''}:`, cameraId);
-    
+
     const pc = new RTCPeerConnection(iceServers);
-    
+
     if (isPreview) {
         previewPeerConnections.set(cameraId, pc);
     } else {
@@ -921,7 +1035,7 @@ async function handleOffer(offer, cameraId, isPreview) {
 
     pc.ontrack = (event) => {
         console.log(`✅ Stream recibido ${isPreview ? '(preview)' : ''}:`, cameraId);
-        
+
         if (isPreview) {
             const previewVideo = document.getElementById(`preview-video-${cameraId}`);
             if (previewVideo) {
@@ -984,7 +1098,7 @@ function disconnectViewer() {
     peerConnections.clear();
     previewPeerConnections.forEach(pc => pc.close());
     previewPeerConnections.clear();
-    
+
     document.getElementById('viewer-video').srcObject = null;
     document.getElementById('cameras-list').classList.add('hidden');
     document.getElementById('viewer-video-container').classList.add('hidden');
@@ -995,7 +1109,7 @@ function disconnectViewer() {
 function showStatus(elementId, message, type) {
     const statusEl = document.getElementById(elementId);
     if (!statusEl) return;
-    
+
     statusEl.className = `status ${type}`;
     statusEl.textContent = message;
     statusEl.style.display = message ? 'block' : 'none';
