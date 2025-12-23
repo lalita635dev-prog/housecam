@@ -7,6 +7,7 @@ let myId = null;
 let authToken = null;
 let currentUser = null;
 let wakeLock = null;
+let keepAliveInterval = null;
 
 // Variables para detección de movimiento
 let motionDetectionEnabled = false;
@@ -30,10 +31,21 @@ const iceServers = {
 window.addEventListener('DOMContentLoaded', () => {
     setupCameraControls();
     checkWakeLockSupport();
+    requestNotificationPermissionOnLoad();
     
     document.getElementById('login-password').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') login();
     });
+    
+    const toggleBtn = document.getElementById('toggle-advanced');
+    const advancedConfig = document.getElementById('advanced-config');
+    if (toggleBtn && advancedConfig) {
+        toggleBtn.addEventListener('click', () => {
+            advancedConfig.classList.toggle('hidden');
+            toggleBtn.textContent = advancedConfig.classList.contains('hidden') ? 
+                '⚙️ Mostrar Configuración Avanzada' : '⚙️ Ocultar Configuración';
+        });
+    }
 });
 
 window.addEventListener('beforeunload', () => {
@@ -42,17 +54,21 @@ window.addEventListener('beforeunload', () => {
     }
     if (ws) ws.close();
     releaseWakeLock();
+    if (keepAliveInterval) clearInterval(keepAliveInterval);
 });
 
-document.addEventListener('visibilitychange', () => {
+document.addEventListener('visibilitychange', async () => {
     if (document.hidden) {
         console.log('📱 Página oculta');
     } else {
         console.log('📱 Página visible');
+        if (localStream && document.getElementById('keep-awake')?.checked) {
+            await requestWakeLock();
+        }
     }
 });
 
-// ==================== WAKE LOCK ====================
+// ==================== WAKE LOCK MEJORADO ====================
 function checkWakeLockSupport() {
     if ('wakeLock' in navigator) {
         console.log('✅ Wake Lock API disponible');
@@ -66,11 +82,12 @@ function checkWakeLockSupport() {
 async function requestWakeLock() {
     if (!('wakeLock' in navigator)) {
         showWakeLockStatus('⚠️ Wake Lock no disponible', 'warning');
+        startKeepAlive();
         return false;
     }
 
     const keepAwakeCheckbox = document.getElementById('keep-awake');
-    if (!keepAwakeCheckbox.checked) {
+    if (!keepAwakeCheckbox?.checked) {
         showWakeLockStatus('ℹ️ Mantener pantalla activa está desactivado', 'info');
         return false;
     }
@@ -80,17 +97,50 @@ async function requestWakeLock() {
         console.log('🔒 Wake Lock activado');
         showWakeLockStatus('🔋 Pantalla permanecerá activa', 'success');
 
-        wakeLock.addEventListener('release', () => {
+        wakeLock.addEventListener('release', async () => {
             console.log('🔓 Wake Lock liberado');
-            showWakeLockStatus('⚠️ Wake Lock liberado', 'warning');
+            showWakeLockStatus('⚠️ Wake Lock liberado, reactivando...', 'warning');
+            if (localStream && keepAwakeCheckbox?.checked) {
+                setTimeout(() => requestWakeLock(), 1000);
+            }
         });
 
+        startKeepAlive();
         return true;
     } catch (err) {
         console.error('❌ Error al activar Wake Lock:', err);
-        showWakeLockStatus(`❌ Error: ${err.message}`, 'error');
+        showWakeLockStatus(`⚠️ Usando modo alternativo`, 'warning');
+        startKeepAlive();
         return false;
     }
+}
+
+function startKeepAlive() {
+    if (keepAliveInterval) clearInterval(keepAliveInterval);
+    
+    keepAliveInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+        }
+        playKeepAliveSound();
+    }, 25000);
+}
+
+function playKeepAliveSound() {
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        gainNode.gain.value = 0.001;
+        oscillator.frequency.value = 20000;
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.01);
+    } catch (e) {}
 }
 
 function releaseWakeLock() {
@@ -102,6 +152,10 @@ function releaseWakeLock() {
                 hideWakeLockStatus();
             })
             .catch(err => console.error('Error:', err));
+    }
+    if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
     }
 }
 
@@ -176,8 +230,9 @@ function showCameraInterface() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app-screen').classList.add('active');
     document.getElementById('current-user').textContent = currentUser.username;
-    document.getElementById('current-role').textContent = '🔹 Cámara';
+    document.getElementById('current-role').textContent = '📹 Cámara';
     document.getElementById('camera-mode-btn').classList.remove('hidden');
+    document.getElementById('viewer-mode-btn').classList.add('hidden');
     selectMode('camera');
 }
 
@@ -187,6 +242,7 @@ function showViewerInterface() {
     document.getElementById('current-user').textContent = currentUser.username;
     document.getElementById('current-role').textContent = '👁️ Viewer';
     document.getElementById('camera-mode-btn').classList.add('hidden');
+    document.getElementById('viewer-mode-btn').classList.remove('hidden');
     selectMode('viewer');
     connectViewer();
 }
@@ -229,11 +285,11 @@ function selectMode(mode) {
     buttons.forEach(btn => btn.classList.remove('active'));
     
     if (mode === 'camera') {
-        document.getElementById('camera-mode-btn').classList.add('active');
+        document.getElementById('camera-mode-btn')?.classList.add('active');
         document.getElementById('camera-section').classList.add('active');
         document.getElementById('viewer-section').classList.remove('active');
     } else {
-        buttons[1].classList.add('active');
+        document.getElementById('viewer-mode-btn')?.classList.add('active');
         document.getElementById('viewer-section').classList.add('active');
         document.getElementById('camera-section').classList.remove('active');
     }
@@ -241,22 +297,22 @@ function selectMode(mode) {
 
 // ==================== CONTROLES CÁMARA ====================
 function setupCameraControls() {
-    document.getElementById('brightness').addEventListener('input', (e) => {
+    document.getElementById('brightness')?.addEventListener('input', (e) => {
         document.getElementById('brightness-value').textContent = e.target.value;
         applyVideoFilters();
     });
 
-    document.getElementById('contrast').addEventListener('input', (e) => {
+    document.getElementById('contrast')?.addEventListener('input', (e) => {
         document.getElementById('contrast-value').textContent = e.target.value;
         applyVideoFilters();
     });
 
-    document.getElementById('zoom').addEventListener('input', (e) => {
+    document.getElementById('zoom')?.addEventListener('input', (e) => {
         document.getElementById('zoom-value').textContent = parseFloat(e.target.value).toFixed(1);
         applyVideoZoom();
     });
 
-    document.getElementById('night-mode').addEventListener('change', (e) => {
+    document.getElementById('night-mode')?.addEventListener('change', (e) => {
         const video = document.getElementById('camera-preview');
         if (e.target.checked) {
             video.classList.add('night-mode');
@@ -279,7 +335,7 @@ function applyVideoFilters() {
     const video = document.getElementById('camera-preview');
     const brightness = document.getElementById('brightness').value;
     const contrast = document.getElementById('contrast').value;
-    const nightMode = document.getElementById('night-mode').checked;
+    const nightMode = document.getElementById('night-mode')?.checked;
     
     if (!nightMode) {
         video.style.filter = `brightness(${brightness}%) contrast(${contrast}%)`;
@@ -389,6 +445,19 @@ function toggleMotionDetection() {
     }
 }
 
+// ==================== NOTIFICACIONES MEJORADAS ====================
+function requestNotificationPermissionOnLoad() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        setTimeout(() => {
+            if (document.visibilityState === 'visible') {
+                Notification.requestPermission().then(permission => {
+                    console.log('🔔 Permiso de notificaciones:', permission);
+                });
+            }
+        }, 2000);
+    }
+}
+
 function requestNotificationPermission() {
     if (!('Notification' in window)) {
         alert('Este navegador no soporta notificaciones');
@@ -397,26 +466,35 @@ function requestNotificationPermission() {
 
     if (Notification.permission === 'granted') {
         showStatus('viewer-status', '✅ Notificaciones activas', 'success');
-        setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 2000);
+        testNotification();
+        setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
         return;
     }
 
     Notification.requestPermission().then(permission => {
         if (permission === 'granted') {
             showStatus('viewer-status', '✅ Notificaciones activadas', 'success');
-            new Notification('🏠 HouseCam App', {
-                body: 'Notificaciones activadas',
-                icon: '/icons/icon-192x192.png',
-                tag: 'test',
-                requireInteraction: false,
-                vibrate: [200, 100, 200]
-            });
+            testNotification();
             setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
         } else {
             showStatus('viewer-status', '⚠️ Notificaciones bloqueadas', 'error');
             setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
         }
     });
+}
+
+function testNotification() {
+    try {
+        new Notification('🏠 HouseCam App', {
+            body: 'Notificaciones activadas correctamente',
+            icon: '/icons/icon-192x192.png',
+            tag: 'test',
+            requireInteraction: false,
+            vibrate: [200, 100, 200]
+        });
+    } catch (e) {
+        console.error('Error al mostrar notificación:', e);
+    }
 }
 
 function handleMotionAlert(data) {
@@ -429,7 +507,7 @@ function handleMotionAlert(data) {
                 icon: '/icons/icon-192x192.png',
                 badge: '/icons/icon-72x72.png',
                 tag: data.cameraId,
-                requireInteraction: false,
+                requireInteraction: true,
                 vibrate: [200, 100, 200, 100, 200],
                 silent: false
             });
@@ -439,7 +517,10 @@ function handleMotionAlert(data) {
             };
         } catch (error) {
             console.error('Error notificación:', error);
+            sendNotificationToServiceWorker(data);
         }
+    } else {
+        sendNotificationToServiceWorker(data);
     }
     
     const alertsContainer = document.getElementById('motion-alerts-list');
@@ -472,6 +553,26 @@ function handleMotionAlert(data) {
     
     showStatus('viewer-status', `🚨 Movimiento en ${data.cameraName}`, 'error');
     setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
+    
+    if ('vibrate' in navigator) {
+        navigator.vibrate([200, 100, 200, 100, 200]);
+    }
+}
+
+function sendNotificationToServiceWorker(data) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification('🚨 Movimiento Detectado', {
+                body: `Cámara: ${data.cameraName}\n${new Date(data.timestamp).toLocaleTimeString()}`,
+                icon: '/icons/icon-192x192.png',
+                badge: '/icons/icon-72x72.png',
+                tag: data.cameraId,
+                requireInteraction: true,
+                vibrate: [200, 100, 200, 100, 200],
+                data: data
+            });
+        });
+    }
 }
 
 // ==================== CÁMARA ====================
@@ -552,6 +653,9 @@ async function startCamera() {
                     }
                     break;
 
+                case 'pong':
+                    break;
+
                 case 'session-taken':
                     showStatus('camera-status', '❌ Cámara en uso en otro dispositivo', 'error');
                     setTimeout(() => {
@@ -598,7 +702,6 @@ async function createPeerConnection(viewerId, isPreview) {
     let maxBitrate = quality === 'high' ? 2500000 : quality === 'low' ? 800000 : 1500000;
     let maxFramerate = quality === 'high' ? 30 : quality === 'low' ? 20 : 25;
 
-    // Para previews, reducir calidad
     if (isPreview) {
         maxBitrate = 500000;
         maxFramerate = 15;
@@ -761,7 +864,7 @@ function displayCamerasWithPreviews(cameras) {
     const listEl = document.getElementById('cameras-list');
     listEl.classList.remove('hidden');
     
-    console.log('🔹 Cámaras disponibles:', cameras);
+    console.log('📹 Cámaras disponibles:', cameras);
     
     if (cameras.length === 0) {
         listEl.innerHTML = '<p style="text-align: center; color: #94a3b8;">No hay cámaras disponibles</p>';
@@ -770,7 +873,7 @@ function displayCamerasWithPreviews(cameras) {
 
     listEl.innerHTML = cameras.map(cam => `
         <div class="camera-card" onclick="watchCamera('${cam.id}', '${cam.name}')">
-            <h3>🔹 ${cam.name}</h3>
+            <h3>📹 ${cam.name}</h3>
             <p>👁️ ${cam.viewers} espectador(es)</p>
             <p style="margin-top: 5px; color: #6ee7b7;">🟢 En línea</p>
             <div class="camera-preview-container" id="preview-${cam.id}">
@@ -780,7 +883,6 @@ function displayCamerasWithPreviews(cameras) {
         </div>
     `).join('');
 
-    // Solicitar previews
     cameras.forEach(cam => requestCameraPreview(cam.id));
 }
 
@@ -798,7 +900,7 @@ function watchCamera(cameraId, cameraName) {
     
     document.getElementById('cameras-list').classList.add('hidden');
     document.getElementById('viewer-video-container').classList.remove('hidden');
-    document.getElementById('viewer-info').textContent = `🔹 ${cameraName}`;
+    document.getElementById('viewer-info').textContent = `📹 ${cameraName}`;
 
     ws.send(JSON.stringify({
         type: 'request-camera',

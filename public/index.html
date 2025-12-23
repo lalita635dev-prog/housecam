@@ -270,6 +270,18 @@
             width: auto;
         }
 
+        .btn-toggle {
+            background: transparent;
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            margin-bottom: 15px;
+        }
+
+        .btn-toggle:hover {
+            background: #38bdf8;
+            color: #0f172a;
+        }
+
         video {
             width: 100%;
             max-width: 100%;
@@ -369,7 +381,7 @@
         }
 
         .hidden {
-            display: none;
+            display: none !important;
         }
 
         .video-container {
@@ -484,6 +496,18 @@
             text-align: center;
         }
 
+        .version-badge {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(30, 41, 59, 0.9);
+            color: #64748b;
+            padding: 4px 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            z-index: 1000;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .container {
@@ -518,14 +542,17 @@
     </style>
 </head>
 <body>
+    <!-- Badge de versión -->
+    <div class="version-badge">v5.3</div>
+
     <!-- Pantalla de Login -->
     <div id="login-screen" class="login-screen">
         <div class="login-box">
-            <h2>🔐 HouseCam App</h2>
+            <h2>🏠 HouseCam App</h2>
             <div class="input-group">
                 <label>Tipo de Usuario:</label>
                 <select id="login-role">
-                    <option value="camera">🔹 Cámara</option>
+                    <option value="camera">📹 Cámara</option>
                     <option value="viewer">👁️ Visualización</option>
                 </select>
             </div>
@@ -560,13 +587,13 @@
             </div>
 
             <div class="mode-selection">
-                <button class="mode-btn" id="camera-mode-btn" onclick="selectMode('camera')">🔹 Modo Cámara</button>
-                <button class="mode-btn" onclick="selectMode('viewer')">👁️ Modo Visualización</button>
+                <button class="mode-btn" id="camera-mode-btn" onclick="selectMode('camera')">📹 Modo Cámara</button>
+                <button class="mode-btn" id="viewer-mode-btn" onclick="selectMode('viewer')">👁️ Modo Visualización</button>
             </div>
 
             <!-- Sección Cámara -->
             <div id="camera-section" class="section">
-                <h2>🔹 Configurar Cámara</h2>
+                <h2>📹 Configurar Cámara</h2>
                 <div class="input-group">
                     <label for="camera-name">Nombre de la Cámara:</label>
                     <input type="text" id="camera-name" placeholder="Ej: Entrada Principal" value="Cámara 1">
@@ -581,27 +608,34 @@
                 </div>
                 <div class="input-group">
                     <label>
-                        <input type="checkbox" id="night-mode"> 🌙 Modo Nocturno
-                    </label>
-                </div>
-                <div class="input-group">
-                    <label>
                         <input type="checkbox" id="keep-awake" checked> 🔋 Mantener Pantalla Activa
                     </label>
                     <small style="color: #64748b; margin-top: 5px; display: block;">Evita que la transmisión se pause al bloquear la pantalla</small>
                 </div>
-                <div class="input-group">
-                    <label for="brightness">☀️ Brillo: <span id="brightness-value">100</span>%</label>
-                    <input type="range" id="brightness" min="50" max="200" value="100">
+
+                <!-- Configuración Avanzada (Oculta por defecto) -->
+                <button class="btn btn-toggle" id="toggle-advanced" style="width: 100%;">⚙️ Mostrar Configuración Avanzada</button>
+                
+                <div id="advanced-config" class="hidden">
+                    <div class="input-group">
+                        <label>
+                            <input type="checkbox" id="night-mode"> 🌙 Modo Nocturno
+                        </label>
+                    </div>
+                    <div class="input-group">
+                        <label for="brightness">☀️ Brillo: <span id="brightness-value">100</span>%</label>
+                        <input type="range" id="brightness" min="50" max="200" value="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="contrast">🎨 Contraste: <span id="contrast-value">100</span>%</label>
+                        <input type="range" id="contrast" min="50" max="200" value="100">
+                    </div>
+                    <div class="input-group">
+                        <label for="zoom">🔍 Zoom: <span id="zoom-value">1.0</span>x</label>
+                        <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
+                    </div>
                 </div>
-                <div class="input-group">
-                    <label for="contrast">🎨 Contraste: <span id="contrast-value">100</span>%</label>
-                    <input type="range" id="contrast" min="50" max="200" value="100">
-                </div>
-                <div class="input-group">
-                    <label for="zoom">🔍 Zoom: <span id="zoom-value">1.0</span>x</label>
-                    <input type="range" id="zoom" min="1" max="3" step="0.1" value="1">
-                </div>
+
                 <button class="btn" id="start-camera-btn" onclick="startCamera()">Iniciar Cámara</button>
                 <button class="btn btn-danger hidden" id="stop-camera-btn" onclick="stopCamera()">Detener Cámara</button>
                 <div id="camera-status"></div>

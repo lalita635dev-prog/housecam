@@ -42,7 +42,7 @@ function loadUsersFromEnv() {
 
   // Valores por defecto solo para desarrollo
   if (Object.keys(users.cameras).length === 0 && Object.keys(users.viewers).length === 0) {
-    console.warn('⚠️  ADVERTENCIA: Usando credenciales por defecto');
+    console.warn('⚠️ ADVERTENCIA: Usando credenciales por defecto');
     users.cameras = { 'camera_demo': hashPassword('demo123') };
     users.viewers = { 'viewer_demo': hashPassword('demo123') };
   }
@@ -147,13 +147,14 @@ app.get('/ping', (req, res) => {
     cameras: cameras.size,
     viewers: viewers.size,
     sessions: activeSessions.size,
-    activeUsers: activeConnections.size
+    activeUsers: activeConnections.size,
+    version: '5.3.0'
   });
 });
 
 // ============ SERVIDOR WEBSOCKET ============
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor en puerto ${PORT}`);
+  console.log(`🚀 Servidor v5.3 en puerto ${PORT}`);
   console.log(`📊 Usuarios cargados:`);
   console.log(`   - Cámaras: ${Object.keys(USERS.cameras).length}`);
   console.log(`   - Viewers: ${Object.keys(USERS.viewers).length}`);
@@ -242,6 +243,11 @@ wss.on('connection', (ws) => {
           }));
           
           console.log(`Autenticado: ${session.userId} (${session.role})`);
+          break;
+
+        case 'ping':
+          // Responder al ping para mantener la conexión activa
+          ws.send(JSON.stringify({ type: 'pong' }));
           break;
 
         case 'register-camera':
