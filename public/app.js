@@ -12,6 +12,14 @@ let keepAliveInterval = null;
 let keepAliveAudio = null;
 let screenLockWorkaround = null;
 
+// Variables para reconexión automática
+let reconnectAttempts = 0;
+let maxReconnectAttempts = 10;
+let reconnectDelay = 2000; // 2 segundos inicial
+let isIntentionalDisconnect = false;
+let reconnectTimeout = null;
+let connectionCheckInterval = null;
+
 // Variables para detección de movimiento
 let motionDetectionEnabled = false;
 let motionDetectionInterval = null;
@@ -347,6 +355,13 @@ function showViewerInterface() {
 }
 
 async function logout() {
+    isIntentionalDisconnect = true;
+
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+
     try {
         await fetch('/api/logout', {
             method: 'POST',
@@ -676,6 +691,9 @@ function sendNotificationToServiceWorker(data) {
 
 // ==================== CÁMARA ====================
 async function startCamera() {
+    isIntentionalDisconnect = false;
+    reconnectAttempts = 0;
+
     const cameraName = document.getElementById('camera-name').value.trim();
     const quality = document.getElementById('video-quality').value;
 
@@ -715,6 +733,7 @@ async function startCamera() {
         applyVideoFilters();
         applyVideoZoom();
         await requestWakeLock();
+
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${protocol}//${window.location.host}`);
 
@@ -739,6 +758,18 @@ async function startCamera() {
                     document.getElementById('start-camera-btn').classList.add('hidden');
                     document.getElementById('stop-camera-btn').classList.remove('hidden');
                     document.getElementById('motion-controls').classList.remove('hidden');
+
+                    //MONITOREO
+                    if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+                    connectionCheckInterval = setInterval(() => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'ping' }));
+                        } else if (ws && ws.readyState === WebSocket.CLOSED && !isIntentionalDisconnect) {
+                            console.log('⚠️ Conexión perdida detectada, reconectando...');
+                            reconnectCamera();
+                        }
+                    }, 10000); // Cada 10 segundos
+
                     break;
 
                 case 'viewer-joined':
@@ -789,10 +820,32 @@ async function startCamera() {
             }
         };
 
-        ws.onerror = () => showStatus('camera-status', '❌ Error de conexión', 'error');
+        ws.onerror = (error) => {
+            console.error('❌ Error WebSocket:', error);
+            showStatus('camera-status', '❌ Error de conexión', 'error');
+        };
+
         ws.onclose = () => {
             console.log('🔌 WebSocket cerrado');
-            releaseWakeLock();
+
+            if (!isIntentionalDisconnect && localStream) {
+                // Reconexión automática para cámara
+                reconnectAttempts++;
+                if (reconnectAttempts <= maxReconnectAttempts) {
+                    const delay = Math.min(reconnectDelay * reconnectAttempts, 30000);
+                    showStatus('camera-status', `🔄 Reconectando en ${delay / 1000}s... (${reconnectAttempts}/${maxReconnectAttempts})`, 'info');
+
+                    reconnectTimeout = setTimeout(() => {
+                        console.log('🔄 Intentando reconectar cámara...');
+                        reconnectCamera();
+                    }, delay);
+                } else {
+                    showStatus('camera-status', '❌ No se pudo reconectar. Intenta reiniciar la cámara.', 'error');
+                    releaseWakeLock();
+                }
+            } else {
+                releaseWakeLock();
+            }
         };
 
     } catch (error) {
@@ -873,6 +926,18 @@ async function createPeerConnection(viewerId, isPreview) {
 }
 
 function stopCamera() {
+    isIntentionalDisconnect = true;
+
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+        connectionCheckInterval = null;
+    }
+
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
     }
@@ -899,9 +964,126 @@ function stopCamera() {
     hideWakeLockStatus();
 }
 
+// RECONEXION
+async function reconnectCamera() {
+    if (!localStream || isIntentionalDisconnect) {
+        console.log('❌ No se puede reconectar: stream no disponible o desconexión intencional');
+        return;
+    }
+
+    isIntentionalDisconnect = false;
+
+    try {
+        const cameraName = document.getElementById('camera-name').value.trim();
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+        ws.onopen = () => {
+            console.log('✅ WebSocket reconectado');
+            reconnectAttempts = 0; // Reset contador
+            ws.send(JSON.stringify({ type: 'authenticate', token: authToken }));
+        };
+
+        ws.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+
+            switch (data.type) {
+                case 'authenticated':
+                    ws.send(JSON.stringify({ type: 'register-camera', name: cameraName }));
+                    break;
+
+                case 'registered':
+                    myId = data.id;
+                    console.log('✅ Cámara re-registrada:', myId);
+                    showStatus('camera-status', '✅ Transmitiendo (reconectado)', 'success');
+
+                    // Reiniciar keep-alive
+                    await requestWakeLock();
+                    break;
+
+                case 'viewer-joined':
+                    console.log('👁️ Viewer conectado:', data.viewerId);
+                    await createPeerConnection(data.viewerId, false);
+                    break;
+
+                case 'preview-request':
+                    console.log('🔍 Solicitud de preview:', data.viewerId);
+                    await createPeerConnection(data.viewerId, true);
+                    break;
+
+                case 'answer':
+                    const pc = peerConnections.get(data.from) || previewPeerConnections.get(data.from);
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                    }
+                    break;
+
+                case 'ice-candidate':
+                    const conn = peerConnections.get(data.from) || previewPeerConnections.get(data.from);
+                    if (conn && data.candidate) {
+                        await conn.addIceCandidate(new RTCIceCandidate(data.candidate));
+                    }
+                    break;
+
+                case 'pong':
+                    break;
+
+                case 'session-taken':
+                    showStatus('camera-status', '❌ Cámara en uso en otro dispositivo', 'error');
+                    isIntentionalDisconnect = true;
+                    setTimeout(() => {
+                        stopCamera();
+                        logout();
+                    }, 3000);
+                    break;
+
+                case 'auth-failed':
+                    showStatus('camera-status', '❌ Sesión expirada', 'error');
+                    isIntentionalDisconnect = true;
+                    setTimeout(logout, 2000);
+                    break;
+
+                case 'error':
+                    showStatus('camera-status', `❌ ${data.message}`, 'error');
+                    break;
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('❌ Error WebSocket en reconexión:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('🔌 WebSocket cerrado en reconexión');
+
+            if (!isIntentionalDisconnect && localStream) {
+                reconnectAttempts++;
+                if (reconnectAttempts <= maxReconnectAttempts) {
+                    const delay = Math.min(reconnectDelay * reconnectAttempts, 30000);
+                    showStatus('camera-status', `🔄 Reconectando en ${delay / 1000}s... (${reconnectAttempts}/${maxReconnectAttempts})`, 'info');
+
+                    reconnectTimeout = setTimeout(() => {
+                        reconnectCamera();
+                    }, delay);
+                } else {
+                    showStatus('camera-status', '❌ No se pudo reconectar. Intenta reiniciar la cámara.', 'error');
+                    releaseWakeLock();
+                }
+            }
+        };
+
+    } catch (error) {
+        console.error('❌ Error en reconectCamera:', error);
+        showStatus('camera-status', `❌ Error de reconexión: ${error.message}`, 'error');
+    }
+}
+
 // ==================== VIEWER ====================
 function connectViewer() {
     if (ws && ws.readyState === WebSocket.OPEN) return;
+
+    isIntentionalDisconnect = false;
+    reconnectAttempts = 0;
 
     showStatus('viewer-status', 'Conectando...', 'info');
 
@@ -971,7 +1153,30 @@ function connectViewer() {
         }
     };
 
-    ws.onerror = () => showStatus('viewer-status', '❌ Error de conexión', 'error');
+    ws.onerror = (error) => {
+        console.error('❌ Error WebSocket viewer:', error);
+        showStatus('viewer-status', '❌ Error de conexión', 'error');
+    };
+
+    ws.onclose = () => {
+        console.log('🔌 WebSocket viewer cerrado');
+
+        if (!isIntentionalDisconnect) {
+            // Reconexión automática para viewer
+            reconnectAttempts++;
+            if (reconnectAttempts <= maxReconnectAttempts) {
+                const delay = Math.min(reconnectDelay * reconnectAttempts, 30000);
+                showStatus('viewer-status', `🔄 Reconectando en ${delay / 1000}s...`, 'info');
+
+                reconnectTimeout = setTimeout(() => {
+                    console.log('🔄 Intentando reconectar viewer...');
+                    reconnectViewer();
+                }, delay);
+            } else {
+                showStatus('viewer-status', '❌ No se pudo reconectar', 'error');
+            }
+        }
+    };
 }
 
 function displayCamerasWithPreviews(cameras) {
@@ -1093,6 +1298,13 @@ function backToCameraList() {
 }
 
 function disconnectViewer() {
+    isIntentionalDisconnect = true;
+
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+
     if (ws) ws.close();
     peerConnections.forEach(pc => pc.close());
     peerConnections.clear();
@@ -1103,6 +1315,107 @@ function disconnectViewer() {
     document.getElementById('cameras-list').classList.add('hidden');
     document.getElementById('viewer-video-container').classList.add('hidden');
     showStatus('viewer-status', '', 'info');
+}
+
+// RECONEXION
+function reconnectViewer() {
+    if (isIntentionalDisconnect) {
+        console.log('❌ Desconexión intencional, no reconectar');
+        return;
+    }
+
+    isIntentionalDisconnect = false;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${window.location.host}`);
+
+    ws.onopen = () => {
+        console.log('✅ WebSocket viewer reconectado');
+        reconnectAttempts = 0; // Reset contador
+        ws.send(JSON.stringify({ type: 'authenticate', token: authToken }));
+    };
+
+    ws.onmessage = async (event) => {
+        const data = JSON.parse(event.data);
+
+        switch (data.type) {
+            case 'authenticated':
+                ws.send(JSON.stringify({ type: 'register-viewer' }));
+                showStatus('viewer-status', '✅ Conectado (reconectado)', 'success');
+                break;
+
+            case 'registered':
+                myId = data.id;
+                console.log('✅ Viewer re-registrado:', myId);
+                document.getElementById('motion-alerts-panel').classList.remove('hidden');
+                break;
+
+            case 'camera-list':
+                displayCamerasWithPreviews(data.cameras);
+                break;
+
+            case 'offer':
+                await handleOffer(data.offer, data.from, data.isPreview);
+                break;
+
+            case 'ice-candidate':
+                const pc = peerConnections.get(data.from) || previewPeerConnections.get(data.from);
+                if (pc && data.candidate) {
+                    await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
+                }
+                break;
+
+            case 'camera-disconnected':
+                showStatus('viewer-status', '⚠️ Cámara desconectada', 'error');
+                backToCameraList();
+                break;
+
+            case 'motion-alert':
+                handleMotionAlert(data);
+                break;
+
+            case 'session-taken':
+                showStatus('viewer-status', '❌ Usuario conectado en otro dispositivo', 'error');
+                isIntentionalDisconnect = true;
+                setTimeout(() => {
+                    disconnectViewer();
+                    logout();
+                }, 3000);
+                break;
+
+            case 'auth-failed':
+                showStatus('viewer-status', '❌ Sesión expirada', 'error');
+                isIntentionalDisconnect = true;
+                setTimeout(logout, 2000);
+                break;
+
+            case 'error':
+                showStatus('viewer-status', `❌ ${data.message}`, 'error');
+                break;
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error('❌ Error WebSocket viewer en reconexión:', error);
+    };
+
+    ws.onclose = () => {
+        console.log('🔌 WebSocket viewer cerrado en reconexión');
+
+        if (!isIntentionalDisconnect) {
+            reconnectAttempts++;
+            if (reconnectAttempts <= maxReconnectAttempts) {
+                const delay = Math.min(reconnectDelay * reconnectAttempts, 30000);
+                showStatus('viewer-status', `🔄 Reconectando en ${delay / 1000}s...`, 'info');
+
+                reconnectTimeout = setTimeout(() => {
+                    reconnectViewer();
+                }, delay);
+            } else {
+                showStatus('viewer-status', '❌ No se pudo reconectar', 'error');
+            }
+        }
+    };
 }
 
 // ==================== UTILIDADES ====================
