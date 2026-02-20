@@ -9,8 +9,6 @@ const pool = require("./db");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const connectedUsers = {};
-
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -25,8 +23,17 @@ const activeSessions = new Map(); // token -> {userId, role, expiresAt, connecti
 // Rastrear conexiones activas por usuario
 const activeConnections = new Map(); // userId -> connectionId
 
-function generateToken() {
-  return crypto.randomBytes(32).toString('hex');
+function generateToken(userId, role) {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  activeSessions.set(token, {
+    userId,
+    role,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 horas
+    connectionId: null
+  });
+
+  return token;
 }
 
 function verifyToken(token) {
@@ -65,8 +72,6 @@ app.post("/api/login", async (req, res) => {
       }
 
       const token = generateToken(username, "viewer");
-      connectedUsers.set(username, { role: "viewer", token });
-
       return res.json({ token, role: "viewer" });
     }
 
@@ -89,8 +94,6 @@ app.post("/api/login", async (req, res) => {
       }
 
       const token = generateToken(username, "camera");
-      connectedUsers.set(username, { role: "camera", token });
-
       return res.json({ token, role: "camera" });
     }
 
