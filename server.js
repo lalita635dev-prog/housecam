@@ -5,8 +5,11 @@ const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
 const pool = require("./db");
 
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const connectedUsers = {};
 
 app.use(express.json());
 app.use(express.static('public'));
