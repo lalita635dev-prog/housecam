@@ -126,9 +126,9 @@ app.get('/ping', (req, res) => {
 });
 
 // ============ SERVIDOR WEBSOCKET ============
-server.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Servidor v5.3 en puerto ${PORT}`);
-  console.log("📊 Sistema iniciado con base de datos PostgreSQL");
+  console.log(`📊 Usuarios cargados:`);
 });
 
 const wss = new WebSocket.Server({ server });
