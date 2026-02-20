@@ -126,19 +126,9 @@ app.get('/ping', (req, res) => {
 });
 
 // ============ SERVIDOR WEBSOCKET ============
-const server = app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Servidor v5.3 en puerto ${PORT}`);
-  console.log(`📊 Usuarios cargados:`);
-  console.log(`   - Cámaras: ${Object.keys(USERS.cameras).length}`);
-  console.log(`   - Viewers: ${Object.keys(USERS.viewers).length}`);
-
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('\n=== MODO DESARROLLO ===');
-    console.log('Credenciales de prueba:');
-    console.log('  Cámara: camera_demo / demo123');
-    console.log('  Viewer: viewer_demo / demo123');
-    console.log('=======================\n');
-  }
+  console.log("📊 Sistema iniciado con base de datos PostgreSQL");
 });
 
 const wss = new WebSocket.Server({ server });
