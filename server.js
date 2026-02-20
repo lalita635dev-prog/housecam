@@ -16,8 +16,6 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-
-
 // Tokens de sesión activos
 const activeSessions = new Map(); // token -> {userId, role, expiresAt, connectionId}
 
@@ -127,11 +125,14 @@ app.get('/ping', (req, res) => {
 
 // ============ SERVIDOR WEBSOCKET ============
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Servidor v5.3 en puerto ${PORT}`);
+  console.log(`🚀 Servidor v5.5 en puerto ${PORT}`);
   console.log(`📊 Usuarios cargados:`);
 });
 
 const wss = new WebSocket.Server({ server });
+
+// A ver si lee la URL de SUPABASE
+console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
 const cameras = new Map();
 const viewers = new Map();
