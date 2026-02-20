@@ -3,6 +3,7 @@ const express = require('express');
 const WebSocket = require('ws');
 const { v4: uuidv4 } = require('uuid');
 const crypto = require('crypto');
+const pool = require("./db");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,42 +16,7 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-function loadUsersFromEnv() {
-  const users = { cameras: {}, viewers: {} };
 
-  // Cargar cámaras
-  let cameraIndex = 1;
-  while (process.env[`CAMERA_${cameraIndex}`]) {
-    const [username, password] = process.env[`CAMERA_${cameraIndex}`].split(':');
-    if (username && password) {
-      users.cameras[username] = hashPassword(password);
-      console.log(`✅ Cámara cargada: ${username}`);
-    }
-    cameraIndex++;
-  }
-
-  // Cargar viewers
-  let viewerIndex = 1;
-  while (process.env[`VIEWER_${viewerIndex}`]) {
-    const [username, password] = process.env[`VIEWER_${viewerIndex}`].split(':');
-    if (username && password) {
-      users.viewers[username] = hashPassword(password);
-      console.log(`✅ Viewer cargado: ${username}`);
-    }
-    viewerIndex++;
-  }
-
-  // Valores por defecto solo para desarrollo
-  if (Object.keys(users.cameras).length === 0 && Object.keys(users.viewers).length === 0) {
-    console.warn('⚠️ ADVERTENCIA: Usando credenciales por defecto');
-    users.cameras = { 'camera_demo': hashPassword('demo123') };
-    users.viewers = { 'viewer_demo': hashPassword('demo123') };
-  }
-
-  return users;
-}
-
-const USERS = loadUsersFromEnv();
 
 // Tokens de sesión activos
 const activeSessions = new Map(); // token -> {userId, role, expiresAt, connectionId}
@@ -65,67 +31,74 @@ function generateToken() {
 function verifyToken(token) {
   const session = activeSessions.get(token);
   if (!session) return null;
-  
+
   if (Date.now() > session.expiresAt) {
     activeSessions.delete(token);
     return null;
   }
-  
+
   return session;
 }
 
 // ============ ENDPOINTS AUTENTICACIÓN ============
-app.post('/api/login', (req, res) => {
-  const { username, password, role } = req.body;
-  
-  if (!username || !password || !role) {
-    return res.status(400).json({ error: 'Faltan datos' });
-  }
-  
-  if (role !== 'camera' && role !== 'viewer') {
-    return res.status(400).json({ error: 'Rol inválido' });
-  }
-  
-  const userDb = role === 'camera' ? USERS.cameras : USERS.viewers;
-  const hashedPassword = hashPassword(password);
-  
-  if (!userDb[username] || userDb[username] !== hashedPassword) {
-    return res.status(401).json({ error: 'Credenciales inválidas' });
-  }
-  
-  // Verificar si el usuario ya tiene una sesión activa
-  if (activeConnections.has(username)) {
-    const existingConnectionId = activeConnections.get(username);
-    const camera = cameras.get(existingConnectionId);
-    const viewer = viewers.get(existingConnectionId);
-    
-    if (camera || viewer) {
-      return res.status(403).json({ 
-        error: 'Ya hay una sesión activa para este usuario en otro dispositivo' 
-      });
-    } else {
-      // La conexión existe pero no está activa, limpiar
-      activeConnections.delete(username);
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  const passwordHash = crypto
+    .createHash("sha256")
+    .update(password)
+    .digest("hex");
+
+  try {
+    // 1️⃣ Buscar en viewers
+    const viewerResult = await pool.query(
+      "SELECT * FROM viewers WHERE username = $1",
+      [username]
+    );
+
+    if (viewerResult.rows.length > 0) {
+      const viewer = viewerResult.rows[0];
+
+      if (viewer.password_hash !== passwordHash) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const token = generateToken(username, "viewer");
+      connectedUsers.set(username, { role: "viewer", token });
+
+      return res.json({ token, role: "viewer" });
     }
+
+    // 2️⃣ Buscar en cameras
+    const cameraResult = await pool.query(
+      "SELECT * FROM cameras WHERE name = $1",
+      [username]
+    );
+
+    if (cameraResult.rows.length > 0) {
+      const camera = cameraResult.rows[0];
+
+      if (camera.password_hash !== passwordHash) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      // bloquear si ya está conectada
+      if (cameras.has(username)) {
+        return res.status(403).json({ error: "Camera already connected" });
+      }
+
+      const token = generateToken(username, "camera");
+      connectedUsers.set(username, { role: "camera", token });
+
+      return res.json({ token, role: "camera" });
+    }
+
+    return res.status(401).json({ error: "User not found" });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
   }
-  
-  // Crear sesión
-  const token = generateToken();
-  const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 horas
-  
-  activeSessions.set(token, {
-    userId: username,
-    role: role,
-    expiresAt: expiresAt,
-    connectionId: null
-  });
-  
-  res.json({
-    token: token,
-    userId: username,
-    role: role,
-    expiresAt: expiresAt
-  });
 });
 
 app.post('/api/logout', (req, res) => {
@@ -141,8 +114,8 @@ app.post('/api/logout', (req, res) => {
 });
 
 app.get('/ping', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
+  res.status(200).json({
+    status: 'ok',
     timestamp: new Date().toISOString(),
     cameras: cameras.size,
     viewers: viewers.size,
@@ -158,7 +131,7 @@ const server = app.listen(PORT, () => {
   console.log(`📊 Usuarios cargados:`);
   console.log(`   - Cámaras: ${Object.keys(USERS.cameras).length}`);
   console.log(`   - Viewers: ${Object.keys(USERS.viewers).length}`);
-  
+
   if (process.env.NODE_ENV !== 'production') {
     console.log('\n=== MODO DESARROLLO ===');
     console.log('Credenciales de prueba:');
@@ -177,7 +150,7 @@ wss.on('connection', (ws) => {
   const connectionId = uuidv4();
   let authenticated = false;
   let userSession = null;
-  
+
   console.log(`Nueva conexión: ${connectionId}`);
 
   // Timeout de autenticación (10 segundos)
@@ -194,7 +167,7 @@ wss.on('connection', (ws) => {
   ws.on('message', (message) => {
     try {
       const data = JSON.parse(message);
-      
+
       // Primer mensaje debe ser autenticación
       if (!authenticated && data.type !== 'authenticate') {
         ws.send(JSON.stringify({
@@ -203,12 +176,12 @@ wss.on('connection', (ws) => {
         }));
         return;
       }
-      
-      switch(data.type) {
+
+      switch (data.type) {
         case 'authenticate':
           clearTimeout(authTimeout);
           const session = verifyToken(data.token);
-          
+
           if (!session) {
             ws.send(JSON.stringify({
               type: 'auth-failed',
@@ -217,7 +190,7 @@ wss.on('connection', (ws) => {
             ws.close();
             return;
           }
-          
+
           // Verificar si el usuario ya está conectado
           if (activeConnections.has(session.userId)) {
             const existingId = activeConnections.get(session.userId);
@@ -230,18 +203,18 @@ wss.on('connection', (ws) => {
               return;
             }
           }
-          
+
           authenticated = true;
           userSession = session;
           session.connectionId = connectionId;
           activeConnections.set(session.userId, connectionId);
-          
+
           ws.send(JSON.stringify({
             type: 'authenticated',
             userId: session.userId,
             role: session.role
           }));
-          
+
           console.log(`Autenticado: ${session.userId} (${session.role})`);
           break;
 
@@ -258,7 +231,7 @@ wss.on('connection', (ws) => {
             }));
             return;
           }
-          
+
           cameras.set(connectionId, {
             ws,
             name: data.name || `Cámara ${cameras.size + 1}`,
@@ -266,13 +239,13 @@ wss.on('connection', (ws) => {
             viewers: new Set(),
             previewViewers: new Set()
           });
-          
+
           ws.send(JSON.stringify({
             type: 'registered',
             id: connectionId,
             role: 'camera'
           }));
-          
+
           broadcastCameraList();
           console.log(`Cámara registrada: ${data.name} (${userSession.userId})`);
           break;
@@ -285,19 +258,19 @@ wss.on('connection', (ws) => {
             }));
             return;
           }
-          
+
           viewers.set(connectionId, {
             ws,
             userId: userSession.userId,
             watchingCamera: null
           });
-          
+
           ws.send(JSON.stringify({
             type: 'registered',
             id: connectionId,
             role: 'viewer'
           }));
-          
+
           sendCameraList(ws);
           console.log(`Viewer registrado: ${userSession.userId}`);
           break;
@@ -308,7 +281,7 @@ wss.on('connection', (ws) => {
             const viewer = viewers.get(connectionId);
             if (viewer) {
               previewCamera.previewViewers.add(connectionId);
-              
+
               previewCamera.ws.send(JSON.stringify({
                 type: 'preview-request',
                 viewerId: connectionId
@@ -324,7 +297,7 @@ wss.on('connection', (ws) => {
             if (viewer) {
               viewer.watchingCamera = data.cameraId;
               camera.viewers.add(connectionId);
-              
+
               camera.ws.send(JSON.stringify({
                 type: 'viewer-joined',
                 viewerId: connectionId
@@ -337,11 +310,11 @@ wss.on('connection', (ws) => {
           if (userSession.role !== 'camera') {
             return;
           }
-          
+
           const motionCamera = cameras.get(connectionId);
           if (motionCamera) {
             console.log(`🚨 Movimiento en: ${motionCamera.name}`);
-            
+
             // Enviar a todos los viewers
             viewers.forEach(viewer => {
               viewer.ws.send(JSON.stringify({
@@ -360,7 +333,7 @@ wss.on('connection', (ws) => {
           const targetId = data.target;
           const targetCamera = cameras.get(targetId);
           const targetViewer = viewers.get(targetId);
-          
+
           if (targetCamera) {
             targetCamera.ws.send(JSON.stringify({
               ...data,
@@ -385,10 +358,10 @@ wss.on('connection', (ws) => {
 
   ws.on('close', () => {
     clearTimeout(authTimeout);
-    
+
     if (cameras.has(connectionId)) {
       const camera = cameras.get(connectionId);
-      
+
       // Notificar a viewers
       camera.viewers.forEach(viewerId => {
         const viewer = viewers.get(viewerId);
@@ -399,19 +372,19 @@ wss.on('connection', (ws) => {
           }));
         }
       });
-      
+
       if (userSession) {
         activeConnections.delete(userSession.userId);
       }
-      
+
       cameras.delete(connectionId);
       broadcastCameraList();
       console.log(`Cámara desconectada: ${connectionId}`);
     }
-    
+
     if (viewers.has(connectionId)) {
       const viewer = viewers.get(connectionId);
-      
+
       if (viewer.watchingCamera) {
         const camera = cameras.get(viewer.watchingCamera);
         if (camera) {
@@ -419,28 +392,57 @@ wss.on('connection', (ws) => {
           camera.previewViewers.delete(connectionId);
         }
       }
-      
+
       if (userSession) {
         activeConnections.delete(userSession.userId);
       }
-      
+
       viewers.delete(connectionId);
       console.log(`Viewer desconectado: ${connectionId}`);
     }
   });
 });
 
-function sendCameraList(ws) {
-  const cameraList = Array.from(cameras.entries()).map(([id, camera]) => ({
-    id,
-    name: camera.name,
-    viewers: camera.viewers.size
-  }));
-  
-  ws.send(JSON.stringify({
-    type: 'camera-list',
-    cameras: cameraList
-  }));
+async function sendCameraList(ws) {
+  if (!ws.username) return;
+
+  try {
+    // obtener id del viewer
+    const viewerResult = await pool.query(
+      "SELECT id FROM viewers WHERE username = $1",
+      [ws.username]
+    );
+
+    if (viewerResult.rows.length === 0) return;
+
+    const viewerId = viewerResult.rows[0].id;
+
+    // obtener cámaras permitidas
+    const permissions = await pool.query(
+      `
+      SELECT c.name
+      FROM cameras c
+      JOIN viewer_camera_permissions vcp
+        ON c.id = vcp.camera_id
+      WHERE vcp.viewer_id = $1
+      `,
+      [viewerId]
+    );
+
+    const allowedCameraNames = permissions.rows.map(r => r.name);
+
+    // filtrar solo las conectadas
+    const visibleCameras = Array.from(cameras.keys())
+      .filter(camName => allowedCameraNames.includes(camName));
+
+    ws.send(JSON.stringify({
+      type: "camera-list",
+      cameras: visibleCameras
+    }));
+
+  } catch (err) {
+    console.error("Error sending camera list:", err);
+  }
 }
 
 function broadcastCameraList() {
@@ -449,12 +451,12 @@ function broadcastCameraList() {
     name: camera.name,
     viewers: camera.viewers.size
   }));
-  
+
   const message = JSON.stringify({
     type: 'camera-list',
     cameras: cameraList
   });
-  
+
   viewers.forEach(viewer => {
     viewer.ws.send(message);
   });
