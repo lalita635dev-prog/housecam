@@ -125,7 +125,7 @@ app.get('/ping', (req, res) => {
     viewers: viewers.size,
     sessions: activeSessions.size,
     activeUsers: activeConnections.size,
-    version: '5.3.0'
+    version: '6.3.0'
   });
 });
 

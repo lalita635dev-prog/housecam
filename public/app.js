@@ -8,6 +8,7 @@ let authToken = null;
 let currentUser = null;
 let wakeLock = null;
 let keepAliveInterval = null;
+let keepAliveAudioInterval = null;
 // NUEVAS VARIABLES PARA WAKE LOCK MEJORADO
 let keepAliveAudio = null;
 let screenLockWorkaround = null;
@@ -212,7 +213,7 @@ function createKeepAliveAudio() {
         console.log('🔊 Audio keep-alive iniciado');
 
         // Reanudar el contexto si se suspende
-        setInterval(() => {
+        keepAliveAudioInterval = setInterval(() => {
             if (audioContext.state === 'suspended') {
                 console.log('🔄 Reanudando audio context...');
                 audioContext.resume();
@@ -249,6 +250,12 @@ function stopScreenLockWorkaround() {
     if (screenLockWorkaround) {
         clearInterval(screenLockWorkaround);
         screenLockWorkaround = null;
+    }
+
+    //Evita acumulación invisible en versiones viejas de Android
+    if (keepAliveAudioInterval) {
+        clearInterval(keepAliveAudioInterval);
+        keepAliveAudioInterval = null;
     }
 }
 
@@ -544,7 +551,7 @@ function toggleMotionDetection() {
         showStatus('camera-status', '✅ Detección activada', 'success');
 
         if (Notification.permission === 'default') {
-            Notification.requestPermission();
+            requestNotificationPermission();
         }
     } else {
         if (motionDetectionInterval) {
@@ -559,17 +566,28 @@ function toggleMotionDetection() {
     }
 }
 
-// ==================== NOTIFICACIONES MEJORADAS ====================
+// ==================== NOTIFICACIONES MEJORADAS Y COMPATIBLES ====================
 function requestNotificationPermissionOnLoad() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        setTimeout(() => {
-            if (document.visibilityState === 'visible') {
-                Notification.requestPermission().then(permission => {
-                    console.log('🔔 Permiso de notificaciones:', permission);
-                });
-            }
-        }, 2000);
-    }
+    if (!('Notification' in window)) return;
+
+    if (Notification.permission !== 'default') return;
+
+    setTimeout(() => {
+        if (document.visibilityState !== 'visible') return;
+
+        // Compatibilidad Android antiguos
+        if (Notification.requestPermission.length === 0) {
+            // Versión moderna (Promise)
+            Notification.requestPermission().then(permission => {
+                console.log('🔔 Permiso de notificaciones:', permission);
+            });
+        } else {
+            // Versión antigua (callback)
+            Notification.requestPermission(function (permission) {
+                console.log('🔔 Permiso de notificaciones:', permission);
+            });
+        }
+    }, 2000);
 }
 
 function requestNotificationPermission() {
@@ -585,16 +603,22 @@ function requestNotificationPermission() {
         return;
     }
 
-    Notification.requestPermission().then(permission => {
+    function handlePermission(permission) {
         if (permission === 'granted') {
             showStatus('viewer-status', '✅ Notificaciones activadas', 'success');
             testNotification();
-            setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
         } else {
             showStatus('viewer-status', '⚠️ Notificaciones bloqueadas', 'error');
-            setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
         }
-    });
+        setTimeout(() => showStatus('viewer-status', '✅ Conectado', 'success'), 3000);
+    }
+
+    // Compatibilidad Android antiguos
+    if (Notification.requestPermission.length === 0) {
+        Notification.requestPermission().then(handlePermission);
+    } else {
+        Notification.requestPermission(handlePermission);
+    }
 }
 
 function testNotification() {
@@ -970,6 +994,11 @@ async function reconnectCamera() {
         console.log('❌ No se puede reconectar: stream no disponible o desconexión intencional');
         return;
     }
+    // Limpiar conexiones anteriores
+    peerConnections.forEach(pc => pc.close());
+    peerConnections.clear();
+    previewPeerConnections.forEach(pc => pc.close());
+    previewPeerConnections.clear();
 
     isIntentionalDisconnect = false;
 
@@ -999,6 +1028,14 @@ async function reconnectCamera() {
 
                     // Reiniciar keep-alive
                     await requestWakeLock();
+                    if (connectionCheckInterval) clearInterval(connectionCheckInterval);
+                    connectionCheckInterval = setInterval(() => {
+                        if (ws && ws.readyState === WebSocket.OPEN) {
+                            ws.send(JSON.stringify({ type: 'ping' }));
+                        } else if (ws && ws.readyState === WebSocket.CLOSED && !isIntentionalDisconnect) {
+                            reconnectCamera();
+                        }
+                    }, 10000);
                     break;
 
                 case 'viewer-joined':
@@ -1323,6 +1360,12 @@ function reconnectViewer() {
         console.log('❌ Desconexión intencional, no reconectar');
         return;
     }
+
+    // Limpiar conexiones anteriores
+    peerConnections.forEach(pc => pc.close());
+    peerConnections.clear();
+    previewPeerConnections.forEach(pc => pc.close());
+    previewPeerConnections.clear();
 
     isIntentionalDisconnect = false;
 
