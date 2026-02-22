@@ -1,4 +1,4 @@
-const CACHE_NAME = 'housecam-v5.3.0';
+const CACHE_NAME = 'housecam-v6.3.0';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -12,7 +12,7 @@ const urlsToCache = [
 
 // Instalación del Service Worker
 self.addEventListener('install', (event) => {
-  console.log('🔧 Service Worker v5.3: Instalando...');
+  console.log('🔧 Service Worker v6.3: Instalando...');
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -29,7 +29,7 @@ self.addEventListener('install', (event) => {
 
 // Activación del Service Worker
 self.addEventListener('activate', (event) => {
-  console.log('🚀 Service Worker v5.3: Activando...');
+  console.log('🚀 Service Worker v6.3: Activando...');
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(

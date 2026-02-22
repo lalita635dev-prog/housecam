@@ -1,6 +1,6 @@
 {
   "name": "sistema-vigilancia",
-  "version": "4.0.0",
+  "version": "6.3.0",
   "description": "Sistema de vigilancia con WebRTC y variables de entorno seguras",
   "main": "server.js",
   "scripts": {

@@ -1,23 +1,62 @@
 
-# 🎥 Sistema de Vigilancia con WebRTC - V5
+# House Cam v6
 
-Sistema de vigilancia en tiempo real con autenticación y **detección de movimiento**, usando WebRTC para streaming de video peer-to-peer.
+House Cam es un sistema de monitoreo en tiempo real con autenticación avanzada, detección de movimiento y gestión completa de usuarios y cámaras.
+Optimizado para mayor rendimiento, seguridad y escalabilidad.
 
-## 🆕 Nueva Funcionalidad - Detección de Movimiento
+## 🆕 Novedades en la Versión 6
 
-✅ **Análisis de video en tiempo real** - Detecta cambios entre frames  
-✅ **Notificaciones instantáneas** - Alertas push del navegador  
-✅ **Lista de alertas en vivo** - Historial de movimientos detectados  
-✅ **Configurable** - Ajusta sensibilidad y tiempo entre alertas  
+🆕 **Base de Datos Integrada** 
+    ✅ Persistencia real de usuarios y cámaras
+    ✅ Almacenamiento estructurado y seguro
+    ✅ Preparado para crecimiento y escalabilidad
 
+⚡ **Mejora de Rendimiento**
+    ✅ Optimización en el manejo de conexiones WebRTC
+    ✅ Mejor gestión de sesiones activas
+    ✅ Reducción de consumo de recursos
 
-## 🔐 Características de Seguridad
+👥 **Nuevo Sistema de Gestión de Usuarios**
+    ✅ Administración avanzada de usuarios
+    ✅ Mejor control de autenticación
+    ✅ Manejo más eficiente de sesiones
 
-- ✅ **Autenticación con contraseña** - Login obligatorio para acceder
-- ✅ **Tokens de sesión** - Sesiones válidas por 24 horas
-- ✅ **Control de acceso basado en roles** - Cámaras vs Viewers
-- ✅ **Timeout de autenticación** - 10 segundos para autenticarse
-- ✅ **Limpieza automática de sesiones** - Sesiones expiradas se eliminan
+🔐 **Permisos Personalizados por Usuario**
+    ✅ Asignación individual de permisos
+    ✅ Control granular de acceso
+    ✅ Separación clara entre roles y capacidades
+
+📹 **Nuevas Opciones de Creación**
+    ✅ Creación dinámica de cámaras
+    ✅ Alta y configuración de nuevos usuarios
+    ✅ Administración centralizada
+
+## 🎯 Funcionalidades Principales
+
+📡 **Streaming en Tiempo Real**
+    - WebRTC peer-to-peer
+    - Baja latencia
+    - Comunicación directa entre dispositivos
+
+🧠 **Detección de Movimiento**
+    - Análisis de video en tiempo real (Canvas API)
+    - Comparación inteligente entre frames
+    - Alertas automáticas configurables
+    - Historial de movimientos detectados
+
+🔔 **Notificaciones**
+    - Alertas push del navegador
+    - Avisos instantáneos ante actividad sospechosa
+
+🔐 **Seguridad**
+    - Autenticación con contraseña
+    - Tokens de sesión (24 horas)
+    - Control de acceso por roles
+    - Permisos personalizados por usuario
+    - Timeout de autenticación (10 segundos)
+    - Limpieza automática de sesiones expiradas
+    - Gestión avanzada mediante base de datos
+
 
 ## 📝 Estructura del Proyecto
 
@@ -34,22 +73,17 @@ HouseCam/
     ├── pwa-install.js
     ├── offline.html
     └── icons/
-        ├── icon-72x72.png
-        ├── icon-96x96.png
-        ├── icon-128x128.png
-        ├── icon-144x144.png
-        ├── icon-152x152.png
-        ├── icon-192x192.png
-        ├── icon-384x384.png
-        └── icon-512x512.png
 ```
 
 ## 🛠️ Tecnologías
 
 - **Backend:** Node.js, Express, WebSocket
-- **Frontend:** Vanilla JavaScript, WebRTC
-- **Detección:** Canvas API para análisis de frames
-- **Notificaciones:** Notification API del navegador
+- **Base de Datos:** Sistema persistente integrado
+- **Frontend:** Vanilla JavaScript
+- **Streaming:** WebRTC
+- **Detección:** Canvas API
+- **PWA:** Service Worker + Manifest
+- **Notificaciones:** Notification API
 
 
 ## 🔒 Permisos Necesarios
@@ -65,7 +99,7 @@ Para problemas o preguntas, contacta al desarrollador.
 
 ## 📄 Licencia
 
-MIT License - Úsalo libremente para tus proyectos.
+MIT License — Uso libre para proyectos personales y comerciales.
 
 ---
 
