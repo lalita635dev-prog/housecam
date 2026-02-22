@@ -1470,3 +1470,15 @@ function showStatus(elementId, message, type) {
     statusEl.textContent = message;
     statusEl.style.display = message ? 'block' : 'none';
 }
+
+// ==================== VER PASS ====================
+const passwordInput = document.getElementById('password');
+const togglePasswordBtn = document.getElementById('togglePassword');
+
+if (passwordInput && togglePasswordBtn) {
+    togglePasswordBtn.addEventListener('click', function () {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        togglePasswordBtn.textContent = isPassword ? '🙈' : '👁';
+    });
+}

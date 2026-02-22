@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    
+
     <!-- PWA Meta Tags -->
     <meta name="application-name" content="HouseCam App">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,23 +13,23 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#38bdf8">
     <meta name="description" content="Sistema de vigilancia en tiempo real con detección de movimiento">
-    
+
     <!-- Manifest -->
     <link rel="manifest" href="/manifest.json">
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png">
-    
+
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
-    
+
     <!-- Splash Screens para iOS -->
     <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
-    
+
     <title>HouseCam App - Sistema de Vigilancia</title>
-    
+
     <style>
         * {
             margin: 0;
@@ -73,7 +74,7 @@
             padding: 40px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
         }
 
         .login-box h2 {
@@ -207,7 +208,8 @@
             font-weight: 500;
         }
 
-        input, select {
+        input,
+        select {
             width: 100%;
             padding: 12px;
             background: #0f172a;
@@ -217,7 +219,8 @@
             font-size: 16px;
         }
 
-        input:focus, select:focus {
+        input:focus,
+        select:focus {
             outline: none;
             border-color: #38bdf8;
         }
@@ -448,6 +451,7 @@
                 opacity: 0;
                 transform: translateX(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
@@ -478,9 +482,12 @@
         }
 
         @keyframes pulse {
-            0%, 100% {
+
+            0%,
+            100% {
                 opacity: 1;
             }
+
             50% {
                 opacity: 0.7;
             }
@@ -539,8 +546,30 @@
                 height: 180px;
             }
         }
+
+        /* Password */
+        .password-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-container input {
+            width: 100%;
+            padding-right: 40px;
+        }
+
+        .password-container button {
+            position: absolute;
+            right: 8px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
     </style>
 </head>
+
 <body>
     <!-- Badge de versión -->
     <div class="version-badge">v6.3</div>
@@ -553,7 +582,7 @@
                 <label>Tipo de Usuario:</label>
                 <select id="login-role">
                     <option value="camera">📹 Cámara</option>
-                    <option value="viewer">👁️ Visualización</option>
+                    <option value="viewer">👁️ Visualizador</option>
                 </select>
             </div>
             <div class="input-group">
@@ -562,12 +591,17 @@
             </div>
             <div class="input-group">
                 <label>Contraseña:</label>
-                <input type="password" id="login-password" placeholder="Ingrese contraseña" autocomplete="current-password">
+                <div class="password-container">
+                    <input type="password" id="login-password" placeholder="Ingrese contraseña"
+                        autocomplete="current-password">
+                    <button type="button" id="togglePassword">👁</button>
+                </div>
             </div>
             <button class="btn" onclick="login()">Iniciar Sesión</button>
             <div id="login-status" style="margin-top: 15px;"></div>
-            
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155; font-size: 14px; color: #64748b;">
+
+            <div
+                style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #334155; font-size: 14px; color: #64748b;">
                 <p style="text-align: center;"><strong>Solicitar Credenciales al desarrollador</strong></p>
             </div>
         </div>
@@ -583,13 +617,15 @@
                     <span>Usuario: <strong id="current-user"></strong></span>
                     <span style="margin-left: 20px;">Rol: <strong id="current-role"></strong></span>
                 </div>
-                <button class="btn btn-secondary" style="width: auto; padding: 8px 20px;" onclick="logout()">Cerrar Sesión</button>
+                <button class="btn btn-secondary" style="width: auto; padding: 8px 20px;" onclick="logout()">Cerrar
+                    Sesión</button>
             </div>
-
+            <!-- Sección a borrar 
             <div class="mode-selection">
                 <button class="mode-btn" id="camera-mode-btn" onclick="selectMode('camera')">📹 Modo Cámara</button>
-                <button class="mode-btn" id="viewer-mode-btn" onclick="selectMode('viewer')">👁️ Modo Visualización</button>
+                <button class="mode-btn" id="viewer-mode-btn" onclick="selectMode('viewer')">👁️ Modo Visualizador</button>
             </div>
+             -->
 
             <!-- Sección Cámara -->
             <div id="camera-section" class="section">
@@ -610,12 +646,14 @@
                     <label>
                         <input type="checkbox" id="keep-awake" checked> 🔋 Mantener Pantalla Activa
                     </label>
-                    <small style="color: #64748b; margin-top: 5px; display: block;">Evita que la transmisión se pause al bloquear la pantalla</small>
+                    <small style="color: #64748b; margin-top: 5px; display: block;">Evita que la transmisión se pause al
+                        bloquear la pantalla</small>
                 </div>
 
                 <!-- Configuración Avanzada (Oculta por defecto) -->
-                <button class="btn btn-toggle" id="toggle-advanced" style="width: 100%;">⚙️ Mostrar Configuración Avanzada</button>
-                
+                <button class="btn btn-toggle" id="toggle-advanced" style="width: 100%;">⚙️ Mostrar Configuración
+                    Avanzada</button>
+
                 <div id="advanced-config" class="hidden">
                     <div class="input-group">
                         <label>
@@ -637,21 +675,24 @@
                 </div>
 
                 <button class="btn" id="start-camera-btn" onclick="startCamera()">Iniciar Cámara</button>
-                <button class="btn btn-danger hidden" id="stop-camera-btn" onclick="stopCamera()">Detener Cámara</button>
+                <button class="btn btn-danger hidden" id="stop-camera-btn" onclick="stopCamera()">Detener
+                    Cámara</button>
                 <div id="camera-status"></div>
-                
+
                 <div id="wake-lock-status" class="wake-lock-status hidden"></div>
 
                 <!-- Controles de detección de movimiento -->
                 <div id="motion-controls" class="motion-controls hidden">
                     <h3>🚨 Detección de Movimiento</h3>
                     <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-secondary" id="motion-detection-toggle" onclick="toggleMotionDetection()">
+                        <button class="btn btn-secondary" id="motion-detection-toggle"
+                            onclick="toggleMotionDetection()">
                             ▶️ Iniciar Detección
                         </button>
                         <span id="motion-status" style="font-weight: bold; color: #64748b;">⚫ Inactiva</span>
                     </div>
-                    <div id="motion-indicator" style="display: none; background: #7f1d1d; color: #fca5a5; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
+                    <div id="motion-indicator"
+                        style="display: none; background: #7f1d1d; color: #fca5a5; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold;">
                         🚨 MOVIMIENTO DETECTADO
                     </div>
                 </div>
@@ -666,12 +707,14 @@
             <div id="viewer-section" class="section">
                 <h2>👁️ Ver Cámaras</h2>
                 <button class="btn" id="connect-viewer-btn" onclick="connectViewer()">Conectar</button>
-                <button class="btn btn-danger hidden" id="disconnect-viewer-btn" onclick="disconnectViewer()">Desconectar</button>
+                <button class="btn btn-danger hidden" id="disconnect-viewer-btn"
+                    onclick="disconnectViewer()">Desconectar</button>
                 <div id="viewer-status"></div>
 
                 <!-- Panel de alertas de movimiento -->
                 <div id="motion-alerts-panel" class="motion-alerts-panel hidden">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                         <h3 style="color: #38bdf8;">🚨 Alertas de Movimiento</h3>
                         <button class="btn btn-small" onclick="requestNotificationPermission()">
                             🔔 Activar Notificaciones
@@ -686,15 +729,17 @@
                 <div class="video-container hidden" id="viewer-video-container">
                     <video id="viewer-video" autoplay playsinline controls></video>
                     <div class="video-info" id="viewer-info"></div>
-                    <button class="btn" style="margin-top: 10px;" onclick="backToCameraList()">← Volver a la lista</button>
+                    <button class="btn" style="margin-top: 10px;" onclick="backToCameraList()">← Volver a la
+                        lista</button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Scripts -->
-     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
     <script src="/app.js"></script>
     <script src="/pwa-install.js"></script>
 </body>
+
 </html>
